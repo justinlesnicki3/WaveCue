@@ -6,8 +6,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-
-
 import { AppProvider } from './AppContext';
 
 import SearchScreen from './screens/SearchScreen';
@@ -20,6 +18,7 @@ import ClipScreen from './screens/ClipScreen';
 import ClipPlayerScreen from './screens/ClipPlayerScreen';
 import PlaylistDetailScreen from './screens/PlaylistDetailScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import WelcomeScreen from './screens/WelcomeScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -56,6 +55,7 @@ function MainTabs() {
         headerShown: false,
       })}
     >
+      <Tab.Screen name="Welcome Screen" component={WelcomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="My DJs" component={MyDJsScreen} />
       <Tab.Screen name="New Sets" component={NewSetsScreen} />

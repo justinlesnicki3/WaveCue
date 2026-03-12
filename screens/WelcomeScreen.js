@@ -3,8 +3,10 @@ import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {themeColors} from '../theme'
 import turnTableIMG from '../assets/images/turntable.png'
+import { useNavigation } from '@react-navigation/native'
 
 export default function WelcomeScreen() {
+    const navigation = useNavigation();
     return (
         <SafeAreaView style={[styles.container]}>
             <View style={styles.mainView}>
@@ -16,18 +18,18 @@ export default function WelcomeScreen() {
                 <Image source={turnTableIMG} style={styles.image} />
             </View>
             <View className="space-y-4" />
-            <TouchableOpacity style={styles.button}>
+            <TouchableOpacity onPress={()=> navigation.navigate('Sign Up')} style={styles.button}>
                 <Text style={styles.buttonText}>
                     Sign Up
                 </Text>
             </TouchableOpacity>
             <View style={styles.logInLine}>
-                <Text style={styles.logText}>Already have an account?</Text>
-                <TouchableOpacity>
+                    <Text style={styles.logText}>Already have an account?</Text>
+                <TouchableOpacity onPress={()=> navigation.navigate('Log In')}>
                     <Text style={styles.loginButton}> Log In </Text>
                 </TouchableOpacity>
             </View>
-            </View>
+        </View>
         </SafeAreaView>
     )
 }

@@ -19,6 +19,8 @@ import ClipPlayerScreen from './screens/ClipPlayerScreen';
 import PlaylistDetailScreen from './screens/PlaylistDetailScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
+import LogIn from './screens/LoginScreen';
+import SignUp from './screens/SignUpScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -56,6 +58,8 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Welcome Screen" component={WelcomeScreen} />
+      <Tab.Screen name="Log In" component={LogIn} />
+      <Tab.Screen name="Sign Up" component={SignUp} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="My DJs" component={MyDJsScreen} />
       <Tab.Screen name="New Sets" component={NewSetsScreen} />

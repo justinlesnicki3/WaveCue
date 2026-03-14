@@ -55,6 +55,12 @@ export default function LoginScreen() {
                         <Image source={AppleIMG} style={styles.googleImage} />
                     </TouchableOpacity>
                 </View>
+                <View style={styles.noAccount}>
+                    <Text style={styles.noAccountText}>Don't have an account?</Text>
+                    <TouchableOpacity onPress={()=> navigation.navigate('Sign Up')}>
+                        <Text style={styles.signUpButton}> Sign Up</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
     )
@@ -72,12 +78,15 @@ const styles = StyleSheet.create ({
     emailText: {color: '#374151', marginLeft: 25, paddingTop: 10, paddingBottom: 5},
     textInput: {padding: 16, backgroundColor: '#F3F4F6', color: '#374151', borderRadius: 16, marginHorizontal: 30, paddingTop: 15, marginBottom: 10},
     forgotButton: {alignItems: 'flex-end', color: '#374151', marginBottom: 5, marginRight: 35},
-    loginButton: {paddingVertical: 12, backgroundColor: '#FBBF24', borderRadius: 12, marginHorizontal: 45, marginTop: 40},
+    loginButton: {paddingVertical: 10, backgroundColor: '#FBBF24', borderRadius: 12, marginHorizontal: 45, marginTop: 20},
     loginText: {fontWeight: 'bold', textAlign: 'center', color: '#374151'},
-    orOption: {fontSize: 20, color: '#374151', fontWeight: 'bold', textAlign: 'center', paddingVertical: 20},
+    orOption: {fontSize: 20, color: '#374151', fontWeight: 'bold', textAlign: 'center', paddingVertical: 10},
     googleImage: {width: 35, height: 35},
     optionalSocials: {flexDirection: 'row', justifyContent: 'center', gap: 38},
-    iconButtons: {padding: 8, backgroundColor: '#F3F4F6', borderRadius: 16}
+    iconButtons: {padding: 8, backgroundColor: '#F3F4F6', borderRadius: 16},
+    noAccount: {flexDirection: 'row', justifyContent: 'center', marginTop: 24},
+    noAccountText: {fontWeight: '600', color: '#374151'},
+    signUpButton: {color: '#FBBF24'}
 
 
 })

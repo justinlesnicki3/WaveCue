@@ -11,6 +11,15 @@ import signUpIMG from '../assets/images/signUp.png'
 
 export default function SignUpScreen() {
     const navigation = useNavigation();
+
+    const handleSignUp = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+    setLoading(false);
+    if (error) Alert.alert('Error', error.message);
+    else Alert.alert('Success', 'Check your email to confirm your account!');
+};
+
     return (
         <View style={styles.container}>
             <SafeAreaView style={styles.areaView}>

@@ -1,13 +1,14 @@
 // App.js
-import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AppProvider } from './AppContext';
+import React, {useState, useEffect} from 'react';
+import { supabase } from './lib/supabase';
 
+import { AppProvider } from './AppContext';
 import SearchScreen from './screens/SearchScreen';
 import MyDJsScreen from './screens/MyDJsScreen';
 import NewSetsScreen from './screens/NewSetsScreen';
@@ -57,9 +58,6 @@ function MainTabs() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Welcome Screen" component={WelcomeScreen} />
-      <Tab.Screen name="Log In" component={LogIn} />
-      <Tab.Screen name="Sign Up" component={SignUp} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="My DJs" component={MyDJsScreen} />
       <Tab.Screen name="New Sets" component={NewSetsScreen} />
@@ -71,23 +69,37 @@ function MainTabs() {
 }
 
 export default function App() {
+
+      const [session, setSession] = useState(null);
+
+      useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+        supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    }, []);
+
   return (
-    <GestureHandlerRootView style={{ flex: 1}}>
+  <GestureHandlerRootView style={{ flex: 1}}>
     <AppProvider>
       <NavigationContainer>
-        <Stack.Navigator>
-          <Stack.Screen
-            name="Home"
-            component={MainTabs}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen name="DJDetail" component={DJDetailScreen} />
-          <Stack.Screen name="Clip" component={ClipScreen} />
-          <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
-          <Stack.Screen name="ClipPlayer" component={ClipPlayerScreen} />
+        <Stack.Navigator screenOptions={{headerShown: false}}>
+          {session ? (
+          <>
+            <Stack.Screen name="Home" component={MainTabs} />
+            <Stack.Screen name="DJDetail" component={DJDetailScreen} />
+            <Stack.Screen name="Clip" component={ClipScreen} />
+            <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+            <Stack.Screen name="ClipPlayer" component={ClipPlayerScreen} />
+          </>
+          ) : (
+            <>
+              <Stack.Screen name="Welcome" component={WelcomeScreen} />
+              <Stack.Screen name="Log In" component={LogIn} /> 
+              <Stack.Screen name="Sign Up" component={SignUp} /> 
+            </>
+          )}
         </Stack.Navigator>
       </NavigationContainer>
     </AppProvider>
-    </GestureHandlerRootView>
+  </GestureHandlerRootView>
   );
 }

@@ -27,35 +27,48 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function MainTabs() {
+
+  const icons = {
+    Search: ['search', 'search-outline'],
+    'My DJs': ['heart', 'heart-outline'],
+    'New Sets': ['musical-notes', 'musical-notes-outline'],
+    'My Clips': ['albums', 'albums-outline'],
+    Library: ['library', 'library-outline'],
+    Settings: ['settings', 'settings-outline'],
+
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          switch (route.name) {
-            case 'Search':
-              iconName = focused ? 'search' : 'search-outline';
-              break;
-            case 'My DJs':
-              iconName = focused ? 'heart' : 'heart-outline';
-              break;
-            case 'New Sets':
-              iconName = focused ? 'musical-notes' : 'musical-notes-outline';
-              break;
-            case 'My Clips':
-              iconName = focused ? 'albums' : 'albums-outline';
-              break;
-            case 'Library':
-              iconName = focused ? 'library' : 'library-outline';
-              break;
-            default:
-              iconName = 'help-circle-outline';
-          }
-          return <Ionicons name={iconName} size={size} color={color} />;
+          const [activeIcon, inactiveIcon] = icons[route.name] ?? ['help-circle-outline', 'help-circle-outline'];
+          return <Ionicons name={focused ? activeIcon : inactiveIcon} size={size} color={color} />;
         },
+
         tabBarActiveTintColor: '#33498e',
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
+
+        tabBarStyle: {
+          position: 'absolute',
+          bottom: 25,
+          left: 20,
+          right: 20,
+          borderRadius: 20,
+          height: 60,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOffset: {width: 0, height: 4},
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+
+        },
+
+        
+
       })}
     >
       <Tab.Screen name="Search" component={SearchScreen} />

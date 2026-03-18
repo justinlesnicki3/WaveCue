@@ -143,7 +143,7 @@ function SearchScreen() {
           data={filteredDJs}
           keyExtractor={(item) => item.id}
           renderItem={renderDJItem}
-          contentContainerStyle={{ padding: 20, paddingTop: 10 }}
+          contentContainerStyle={{ padding: 20, paddingTop: 10, paddingBottom: 100 }}
           ListEmptyComponent={<Text style={styles.emptyText}>No DJs found</Text>}
           style={{
             flex: 1,

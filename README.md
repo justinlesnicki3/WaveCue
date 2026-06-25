@@ -1,4 +1,4 @@
-﻿# The DJ Set Tracker
+﻿# WaveCue
 
 Growing up, I was always intrigued by Electronic Dance Music (EDM). What makes the EDM scene so unique and fascinating is the constant access to new and never-before-heard music through DJ and producer performances uploaded to YouTube.
 

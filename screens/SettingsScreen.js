@@ -2,9 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { getUser, signOut } from '../services/authService';
 
 export default function SettingsScreen() {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('');
 
   useEffect(() => {
@@ -39,7 +42,15 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>Settings</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-down" size={26} color="#111" />
+        </TouchableOpacity>
+        <Text style={styles.header}>Settings</Text>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Signed in as</Text>
@@ -55,7 +66,8 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 15 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 15 },
+  header: { fontSize: 24, fontWeight: 'bold' },
   card: {
     padding: 14,
     borderRadius: 12,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { DJ_DATABASE } from '../djData'
@@ -57,10 +57,6 @@ export default function WelcomeScreen() {
         outputRange: [0.85, 1],
     });
 
-    const handleOAuthStub = (provider) => {
-        Alert.alert('Coming soon', `${provider} sign-in isn't set up yet.`);
-    };
-
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.topSection}>
@@ -87,32 +83,18 @@ export default function WelcomeScreen() {
 
             <View style={styles.bottomSection}>
                 <TouchableOpacity
-                    style={styles.oauthButton}
-                    onPress={() => handleOAuthStub('Google')}
+                    style={styles.logInButton}
+                    onPress={() => navigation.navigate('Log In')}
                 >
-                    <Text style={styles.oauthButtonText}>Continue with Google</Text>
+                    <Text style={styles.logInButtonText}>Log In</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={styles.oauthButton}
-                    onPress={() => handleOAuthStub('Apple')}
-                >
-                    <Text style={styles.oauthButtonText}>Continue with Apple</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.oauthButton}
+                    style={styles.signUpButton}
                     onPress={() => navigation.navigate('Sign Up')}
                 >
-                    <Text style={styles.oauthButtonText}>Continue with Email</Text>
+                    <Text style={styles.signUpButtonText}>Sign Up</Text>
                 </TouchableOpacity>
-
-                <View style={styles.logInLine}>
-                    <Text style={styles.logInText}>Already have an account? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Log In')}>
-                        <Text style={styles.logInLink}>Log In</Text>
-                    </TouchableOpacity>
-                </View>
             </View>
         </SafeAreaView>
     )
@@ -163,29 +145,28 @@ const styles = StyleSheet.create({
     bottomSection: {
         gap: 12,
     },
-    oauthButton: {
-        backgroundColor: '#e8e8ea',
+    logInButton: {
+        backgroundColor: '#4db8ff',
         paddingVertical: 15,
         borderRadius: 25,
         alignItems: 'center',
     },
-    oauthButtonText: {
+    logInButtonText: {
         color: '#111',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
     },
-    logInLine: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 8,
+    signUpButton: {
+        backgroundColor: 'transparent',
+        paddingVertical: 15,
+        borderRadius: 25,
+        borderWidth: 2,
+        borderColor: '#4db8ff',
+        alignItems: 'center',
     },
-    logInText: {
-        color: '#aaa',
-        fontSize: 14,
-    },
-    logInLink: {
+    signUpButtonText: {
         color: '#4db8ff',
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '700',
     },
 })

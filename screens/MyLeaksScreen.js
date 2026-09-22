@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppContext } from '../AppContext';
+import ProfileButton from '../components/ProfileButton';
 
 import { Swipeable } from 'react-native-gesture-handler';
 
@@ -58,7 +59,10 @@ function MyLeaksScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>My Playlists</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>My Playlists</Text>
+        <ProfileButton />
+      </View>
 
       {playlists.length === 0 ? (
         <Text style={styles.empty}>
@@ -79,7 +83,13 @@ function MyLeaksScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 15 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  header: { fontSize: 24, fontWeight: 'bold' },
 
   playlistItem: {
     padding: 15,

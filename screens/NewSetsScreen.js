@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useAppContext } from '../AppContext';
 import { openYouTubeAt } from '../utils/openYouTubeAt';
+import ProfileButton from '../components/ProfileButton';
 
 import {
   sortSetsByNewest,
@@ -87,12 +88,15 @@ function NewSetsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>New Sets</Text>
+        <ProfileButton />
+      </View>
       <FlatList
         style={styles.list}
         data={sortedSets}
         keyExtractor={keyForSet}
         renderItem={renderSet}
-        ListHeaderComponent={<Text style={styles.header}>New Sets</Text>}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.empty}>No new sets yet</Text>
@@ -116,11 +120,20 @@ const styles = StyleSheet.create({
 
   content: {
     flexGrow: 1,
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 30,
   },
 
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 15 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    marginBottom: 15,
+  },
+
+  header: { fontSize: 24, fontWeight: 'bold' },
 
   card: {
     marginBottom: 14,

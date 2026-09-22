@@ -34,8 +34,6 @@ function MainTabs() {
     'New Sets': ['musical-notes', 'musical-notes-outline'],
     'My Clips': ['albums', 'albums-outline'],
     Library: ['library', 'library-outline'],
-    Settings: ['settings', 'settings-outline'],
-
   };
 
   return (
@@ -76,7 +74,6 @@ function MainTabs() {
       <Tab.Screen name="New Sets" component={NewSetsScreen} />
       <Tab.Screen name="My Clips" component={MyLeaksScreen} />
       <Tab.Screen name="Library" component={DJLibraryScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
@@ -102,6 +99,18 @@ export default function App() {
             <Stack.Screen name="Clip" component={ClipScreen} />
             <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
             <Stack.Screen name="ClipPlayer" component={ClipPlayerScreen} />
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{
+                presentation: 'formSheet',
+                animation: 'slide_from_bottom',
+                sheetAllowedDetents: [0.9],
+                sheetInitialDetentIndex: 0,
+                sheetGrabberVisible: true,
+                sheetCornerRadius: 20,
+              }}
+            />
           </>
           ) : (
             <>

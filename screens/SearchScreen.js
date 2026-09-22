@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import SubscribeButton from '../components/SubscribeButton';
+import ProfileButton from '../components/ProfileButton';
 import { useNavigation } from '@react-navigation/native';
 import { useAppContext } from '../AppContext';
 import { DJ_DATABASE, EDM_GENRES, GENRE_IMAGES } from '../djData';
@@ -137,7 +138,10 @@ function SearchScreen() {
         <StatusBar barStyle="dark-content" />
 
         <View style={styles.header}>
-          <Text style={styles.title}>Search DJs</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Search DJs</Text>
+            <ProfileButton />
+          </View>
 
           <View style={styles.searchBarShadowWrapper}>
             <LinearGradient
@@ -224,7 +228,13 @@ function SearchScreen() {
 const styles = StyleSheet.create({
   screenWrapper: { flex: 1, backgroundColor: '#f5f6fa' },
   header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 },
-  title: { fontSize: 28, fontWeight: '700', color: '#222', marginBottom: 16 },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: { fontSize: 28, fontWeight: '700', color: '#222' },
   searchBarShadowWrapper: {
     shadowColor: '#000',
     shadowOpacity: 0.15,

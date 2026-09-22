@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../AppContext';
 
 import { fetchAndSortDjSets, ensureDjRow } from '../services/djDetailService';
@@ -18,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 function DJDetailScreen() {
   const { params } = useRoute();
+  const navigation = useNavigation();
   const { djName } = params ?? {};
   const { addSavedSet, savedSets, removeSavedSet } = useAppContext();
 
@@ -107,6 +109,12 @@ function DJDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={26} color="#111" />
+        </TouchableOpacity>
         <Text style={styles.header}>
           {normalizedName ? `${normalizedName}'s Past Sets` : 'Past Sets'}
         </Text>
@@ -133,6 +141,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 12,
   },
   header: { fontSize: 24, fontWeight: 'bold', marginRight: 12, flex: 1 },

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useAppContext } from '../AppContext';
 import { openYouTubeAt } from '../utils/openYouTubeAt';
+import ProfileButton from '../components/ProfileButton';
 
 import {
   buildClipNavParams,
@@ -159,7 +160,10 @@ function DJLibraryScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>Your DJ Library</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>Your DJ Library</Text>
+        <ProfileButton />
+      </View>
       <FlatList
         data={savedSets}
         keyExtractor={keyForSavedSet}
@@ -173,7 +177,13 @@ function DJLibraryScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 15 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  header: { fontSize: 24, fontWeight: 'bold' },
 
   cardWrap: {
     marginBottom: 12,

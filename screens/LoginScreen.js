@@ -27,10 +27,6 @@ export default function LoginScreen() {
         }
     };
 
-    const handleOAuthStub = (provider) => {
-        Alert.alert('Coming soon', `${provider} sign-in isn't set up yet.`);
-    };
-
     return (
         <SafeAreaView style={styles.container}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -85,27 +81,6 @@ export default function LoginScreen() {
 
                 <TouchableOpacity>
                     <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>Or Login with</Text>
-                <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.oauthRow}>
-                <TouchableOpacity
-                    style={styles.oauthButton}
-                    onPress={() => handleOAuthStub('Google')}
-                >
-                    <Text style={styles.oauthG}>G</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.oauthButton, styles.oauthButtonDark]}
-                    onPress={() => handleOAuthStub('Apple')}
-                >
-                    <Text style={styles.oauthApple}></Text>
                 </TouchableOpacity>
             </View>
 
@@ -178,29 +153,6 @@ const styles = StyleSheet.create({
     },
     primaryButtonText: { color: '#111', fontSize: 17, fontWeight: '700' },
     forgotText: { color: '#eee', fontSize: 13, textAlign: 'center' },
-    dividerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 36,
-        marginBottom: 20,
-    },
-    dividerLine: { flex: 1, height: 1, backgroundColor: '#555' },
-    dividerText: { color: '#ccc', fontSize: 13, marginHorizontal: 10 },
-    oauthRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 16,
-    },
-    oauthButton: {
-        backgroundColor: '#e8e8ea',
-        paddingVertical: 12,
-        paddingHorizontal: 40,
-        borderRadius: 14,
-        alignItems: 'center',
-    },
-    oauthButtonDark: { backgroundColor: '#2a2a2c' },
-    oauthG: { fontSize: 18, fontWeight: '700', color: '#4285F4' },
-    oauthApple: { fontSize: 18, color: '#fff' },
     bottomSpacer: { flex: 1 },
     noAccount: {
         flexDirection: 'row',

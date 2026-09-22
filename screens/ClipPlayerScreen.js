@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../AppContext';
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -56,12 +57,28 @@ export default function ClipPlayerScreen() {
   if (!currentClip) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={26} color="#111" />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.title}>No clip selected</Text>
       </SafeAreaView>
     );
 }
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={26} color="#111" />
+        </TouchableOpacity>
+      </View>
       <Text style={styles.title}>{currentClip.title}</Text>
       <Text style={styles.djSetTitle}>From: {currentClip.djSetTitle}</Text>
 
@@ -128,6 +145,7 @@ export default function ClipPlayerScreen() {
 // -------------------- Styles --------------------
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9f9f9', padding: 20 },
+  headerRow: { marginBottom: 4 },
   title: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginVertical: 8 },
   djSetTitle: { textAlign: 'center', fontSize: 14, color: '#666' },
   timestamp: { textAlign: 'center', fontSize: 14, marginBottom: 16, color: '#444' },

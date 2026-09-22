@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Animated, Easing, Image, Platform, ActionSheetIOS,} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../AppContext';
 import { Picker } from '@react-native-picker/picker';
 import { Keyboard, TouchableWithoutFeedback } from 'react-native';
@@ -120,6 +121,14 @@ function ClipScreen() {
   return (
   <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
   <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <View style={styles.headerRow}>
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="chevron-back" size={26} color="#111" />
+      </TouchableOpacity>
+    </View>
     {/*Prevents keyboard from covering input fields */}
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -277,6 +286,7 @@ function ClipScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerRow: { paddingHorizontal: 20, paddingTop: 10 },
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
   thumbnail: { width: '100%', height: 200, borderRadius: 12, marginBottom: 20 },

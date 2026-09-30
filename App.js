@@ -3,7 +3,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BlurView } from 'expo-blur';
 
 import React, {useState, useEffect} from 'react';
 import { supabase } from './lib/supabase';
@@ -48,6 +50,35 @@ function MainTabs() {
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
 
+        tabBarBackground: () => (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 20,
+              overflow: 'hidden',
+            }}
+          >
+            <BlurView intensity={100} tint="light" style={{ flex: 1 }} />
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255,255,255,0.45)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.6)',
+                borderRadius: 20,
+              }}
+            />
+          </View>
+        ),
+
         tabBarStyle: {
           position: 'absolute',
           bottom: 25,
@@ -55,7 +86,7 @@ function MainTabs() {
           right: 20,
           borderRadius: 20,
           height: 60,
-          backgroundColor: '#ffffff',
+          backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 10,
           shadowColor: '#000',
@@ -65,7 +96,7 @@ function MainTabs() {
 
         },
 
-        
+
 
       })}
     >

@@ -19,10 +19,6 @@ export function buildLeak({ videoId, start, end, clipTitle, djSetTitle }) {
   };
 }
 
-export function resolvePlaylistName({ newPlaylistName, selectedPlaylist }) {
-  return (newPlaylistName?.trim() || selectedPlaylist || '').trim();
-}
-
 /**
  * IMPORTANT:
  * - If a playlistName is provided, ONLY call addClipToPlaylist (so playlist_id gets set).

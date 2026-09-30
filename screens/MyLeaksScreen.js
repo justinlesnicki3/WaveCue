@@ -18,11 +18,15 @@ import {
   buildPlaylistNavParams,
   playlistKey,
   clipCountLabel,
+  playlistCoverThumbnails,
 } from '../services/myLeaksService';
+import PlaylistCover from '../components/PlaylistCover';
+import useTabBarSpace from '../utils/useTabBarSpace';
 
 function MyLeaksScreen() {
   const { playlists, removePlaylist } = useAppContext();
   const navigation = useNavigation();
+  const bottomSpace = useTabBarSpace();
 
   const renderRightActions = (item) => (
     <TouchableOpacity
@@ -51,8 +55,11 @@ function MyLeaksScreen() {
           navigation.navigate('PlaylistDetail', buildPlaylistNavParams(item.name))
         }
       >
-        <Text style={styles.playlistName}>{item.name}</Text>
-        <Text style={styles.count}>{clipCountLabel(item.clips.length)}</Text>
+        <PlaylistCover thumbnails={playlistCoverThumbnails(item.clips)} size={64} width={100} />
+        <View style={styles.playlistText}>
+          <Text style={styles.playlistName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.count}>{clipCountLabel(item.clips.length)}</Text>
+        </View>
       </TouchableOpacity>
     </Swipeable>
   );
@@ -74,7 +81,7 @@ function MyLeaksScreen() {
           keyExtractor={playlistKey}
           renderItem={renderPlaylist}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 10 }}
+          contentContainerStyle={{ paddingBottom: bottomSpace }}
         />
       )}
     </SafeAreaView>
@@ -92,11 +99,14 @@ const styles = StyleSheet.create({
   header: { fontSize: 24, fontWeight: 'bold' },
 
   playlistItem: {
-    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
     backgroundColor: '#f2f2f2',
     borderRadius: 10,
     marginBottom: 10,
   },
+  playlistText: { flex: 1, marginLeft: 12 },
 
   playlistName: { fontSize: 18, fontWeight: 'bold' },
   count: { fontSize: 14, color: '#666', marginTop: 5 },

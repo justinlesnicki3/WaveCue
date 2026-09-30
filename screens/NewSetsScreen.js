@@ -4,6 +4,7 @@ import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react
 import { useAppContext } from '../AppContext';
 import { openYouTubeAt } from '../utils/openYouTubeAt';
 import ProfileButton from '../components/ProfileButton';
+import useTabBarSpace from '../utils/useTabBarSpace';
 
 import {
   sortSetsByNewest,
@@ -19,6 +20,7 @@ function NewSetsScreen() {
     useAppContext();
 
   const [refreshing, setRefreshing] = useState(false);
+  const bottomSpace = useTabBarSpace();
 
   const sortedSets = useMemo(() => sortSetsByNewest(newSets), [newSets]);
 
@@ -104,7 +106,7 @@ function NewSetsScreen() {
         }
         refreshing={refreshing}
         onRefresh={onRefresh}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomSpace }]}
         alwaysBounceVertical
         bounces
         overScrollMode="always"
@@ -121,7 +123,6 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingBottom: 30,
   },
 
   headerRow: {

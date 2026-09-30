@@ -4,12 +4,14 @@ import { useAppContext } from '../AppContext';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProfileButton from '../components/ProfileButton';
+import useTabBarSpace from '../utils/useTabBarSpace';
 
 import { getDjImage, buildDjDetailNavParams, formatSubscribeDate, keyForDj, } from '../services/myDjsService';
 
 function MyDJsScreen() {
   const { trackedDJs } = useAppContext();
   const navigation = useNavigation();
+  const bottomSpace = useTabBarSpace();
 
   const renderDJ = ({ item }) => {
     const image = getDjImage(item.name);
@@ -47,6 +49,7 @@ function MyDJsScreen() {
         ListEmptyComponent={
           <Text style={styles.empty}>You are not subscribed to any DJs yet.</Text>
         }
+        contentContainerStyle={{ paddingBottom: bottomSpace }}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>

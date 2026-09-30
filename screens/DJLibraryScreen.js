@@ -13,6 +13,7 @@ import {
 import { useAppContext } from '../AppContext';
 import { openYouTubeAt } from '../utils/openYouTubeAt';
 import ProfileButton from '../components/ProfileButton';
+import useTabBarSpace from '../utils/useTabBarSpace';
 
 import {
   buildClipNavParams,
@@ -118,6 +119,7 @@ function LibraryRow({ item, expanded, onToggle, onRemove, onViewYouTube, onCreat
 function DJLibraryScreen({ navigation }) {
   const { savedSets, removeSavedSet } = useAppContext();
   const [expandedId, setExpandedId] = useState(null);
+  const bottomSpace = useTabBarSpace();
 
   const onToggleRow = useCallback((item) => {
     setExpandedId((prev) => toggleExpandedId(prev, item));
@@ -169,6 +171,7 @@ function DJLibraryScreen({ navigation }) {
         keyExtractor={keyForSavedSet}
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.empty}>No DJ sets saved yet.</Text>}
+        contentContainerStyle={{ paddingBottom: bottomSpace }}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>

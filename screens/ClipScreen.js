@@ -1,17 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Animated, Easing, Image, Platform, ActionSheetIOS,} from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Animated, Easing, Image, Platform } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../AppContext';
-import { Picker } from '@react-native-picker/picker';
 import { Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'
+import PlaylistPickerSheet from '../components/PlaylistPickerSheet';
 
 import {
   validateClipInputs,
   buildLeak,
-  resolvePlaylistName,
   saveLeakFlow,
 } from '../services/clipService'; // services for clip creation
 
@@ -22,15 +21,14 @@ function ClipScreen() {
   const navigation = useNavigation();
   const { title, videoId } = route.params; //extract dj set info passed from search results
 
-  const { addLeak, playlists, addPlaylist, addClipToPlaylist } = useAppContext(); //gloabal state access, allow updating playlists across entrie app
+  const { addLeak, playlists, addClipToPlaylist } = useAppContext(); //gloabal state access, allow updating playlists across entrie app
 
   // local state form inputs for creating a clip from this dj set
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [clipTitle, setClipTitle] = useState('');
-  const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [selectedPlaylist, setSelectedPlaylist] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showPlaylistSheet, setShowPlaylistSheet] = useState(false);
 
   //control smooth fade in/fade out animations
   const formOpacity = useRef(new Animated.Value(0)).current;
@@ -73,47 +71,45 @@ function ClipScreen() {
       setStart('');
       setEnd('');
       setClipTitle('');
-      setNewPlaylistName('');
-      setSelectedPlaylist('');
     });
   };
 
-  //save handler: validates inputs and saves the clip to a playlist
+  // "Save to Playlist": validate the clip first, then let the user pick (or create) a playlist
+  const handleOpenPlaylistSheet = () => {
+    const validation = validateClipInputs({ start, end, clipTitle });
+    if (!validation.ok) {
+      Alert.alert('Error', validation.message);
+      return;
+    }
+    Keyboard.dismiss();
+    setShowPlaylistSheet(true);
+  };
 
- const handleSaveLeak = async () => {
-  const validation = validateClipInputs({ start, end, clipTitle });
-  if (!validation.ok) {
-    Alert.alert('Error', validation.message);
-    return;
-  }
-
-  const leak = buildLeak({
-    videoId,
-    start,
-    end,
-    clipTitle,
-    djSetTitle: title,
-  });
-
-  const playlistName = resolvePlaylistName({ newPlaylistName, selectedPlaylist });
-
-  try {
-    const result = await saveLeakFlow({
-      leak,
-      playlistName,
-      addLeak,
-      addClipToPlaylist,
+  // called by the sheet with the chosen (or newly named) playlist
+  const handleSaveToPlaylist = async (playlistName) => {
+    const leak = buildLeak({
+      videoId,
+      start,
+      end,
+      clipTitle,
+      djSetTitle: title,
     });
 
-    Alert.alert(
-      'Saved',
-      `Clip saved${result.playlistName ? ` to "${result.playlistName}"` : ''}`
-    );
-    navigation.goBack();
-  } catch (e) {
-    Alert.alert('Error', e?.message ?? 'Failed to save clip');
-  }
-};
+    try {
+      await saveLeakFlow({
+        leak,
+        playlistName,
+        addLeak,
+        addClipToPlaylist,
+      });
+
+      setShowPlaylistSheet(false);
+      Alert.alert('Saved', `Clip saved to "${playlistName}"`);
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Error', e?.message ?? 'Failed to save clip');
+    }
+  };
 
 
 
@@ -202,73 +198,10 @@ function ClipScreen() {
               blurOnSubmit={true}
             />
 
-            {/*new playlist input section*/}
-            <Text style={styles.label}>New Playlist Name (optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. My Favorites"
-              value={newPlaylistName}
-              onChangeText={setNewPlaylistName}
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-
-
-            {/*conditional render, only shows playlist selector if a playlist already exists*/}
-            {playlists.length > 0 && (
-              <>
-                <Text style={styles.or}>or select existing playlist</Text>
-
-                {/*check platform once again to determine whether or not to use action sheet for ios
-                if Android then use Picker*/}
-                {Platform.OS === 'ios' ? (
-                  <TouchableOpacity
-                    style={styles.compactSelect}
-                    onPress={() => {
-                      const names = playlists.map((p) => p.name);
-                      ActionSheetIOS.showActionSheetWithOptions(
-                        {
-                          title: 'Select a playlist',
-                          options: [...names, 'Cancel'],
-                          cancelButtonIndex: names.length,
-                        },
-                        (buttonIndex) => {
-                          if (buttonIndex < names.length) {
-                            setSelectedPlaylist(names[buttonIndex]);
-                            setNewPlaylistName('');
-                          }
-                        }
-                      );
-                    }}
-                  >
-                    <Text style={styles.compactSelectText}>
-                      {selectedPlaylist || 'Select a playlist...'}
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={{ marginBottom: 20 }}>
-                    <Picker
-                      selectedValue={selectedPlaylist}
-                      onValueChange={(v) => {
-                        setSelectedPlaylist(v);
-                        setNewPlaylistName('');
-                      }}
-                      mode="dropdown"
-                      style={styles.androidPicker}
-                      dropdownIconColor="#555"
-                    >
-                      <Picker.Item label="Select a playlist..." value="" />
-                      {playlists.map((p) => (
-                        <Picker.Item key={p.name} label={p.name} value={p.name} />
-                      ))}
-                    </Picker>
-                  </View>
-                )}
-              </>
-            )}
-            {/*Trigger save process*/}
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveLeak}>
-              <Text style={styles.saveButtonText}>Save Clip</Text>
+            {/*opens the playlist sheet (or "create a playlist" if none exist yet)*/}
+            <TouchableOpacity style={styles.saveButton} onPress={handleOpenPlaylistSheet}>
+              <Ionicons name="add-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.saveButtonText}>Save to Playlist</Text>
             </TouchableOpacity>
 
 
@@ -280,6 +213,13 @@ function ClipScreen() {
         )}
       </ScrollView>
     </KeyboardAvoidingView>
+
+    <PlaylistPickerSheet
+      visible={showPlaylistSheet}
+      playlists={playlists}
+      onSelect={handleSaveToPlaylist}
+      onClose={() => setShowPlaylistSheet(false)}
+    />
     </SafeAreaView>
   </TouchableWithoutFeedback>
 );
@@ -301,14 +241,10 @@ const styles = StyleSheet.create({
   makeClipText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   label: { fontSize: 14, fontWeight: '600', marginTop: 10, marginBottom: 4, color: '#333' },
   input: { borderColor: '#ccc', borderWidth: 1, borderRadius: 6, padding: 10, marginBottom: 10 },
-  or: { textAlign: 'center', marginVertical: 10, color: '#888' },
-  saveButton: { backgroundColor: '#33498e', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  saveButton: { flexDirection: 'row', justifyContent: 'center', backgroundColor: '#33498e', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 20 },
   saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   cancelButton: { paddingVertical: 10, alignItems: 'center', marginTop: 10 },
   cancelText: { color: '#888', fontSize: 15 },
-  compactSelect: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, paddingVertical: 12, paddingHorizontal: 12, justifyContent: 'center', marginBottom: 20 },
-  compactSelectText: { fontSize: 16, color: '#333' },
-  androidPicker: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, marginBottom: 20, height: 44 },
 });
 
 export default ClipScreen;

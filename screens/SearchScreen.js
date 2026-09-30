@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import SubscribeButton from '../components/SubscribeButton';
 import ProfileButton from '../components/ProfileButton';
 import { useNavigation } from '@react-navigation/native';
+import useTabBarSpace from '../utils/useTabBarSpace';
 import { useAppContext } from '../AppContext';
 import { DJ_DATABASE, EDM_GENRES, GENRE_IMAGES } from '../djData';
 import { Keyboard, TouchableWithoutFeedback } from 'react-native';
@@ -46,6 +47,7 @@ function SearchScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState(null);
   const navigation = useNavigation();
+  const bottomSpace = useTabBarSpace();
   const { addTrackedDJ, trackedDJs, loading, removeTrackedDJ } = useAppContext();
 
   const resultsOpacity = useRef(new Animated.Value(0)).current;
@@ -163,7 +165,7 @@ function SearchScreen() {
         {isBrowsing ? (
           // -------------------- BROWSE MODE: big genre cards --------------------
           <ScrollView
-            contentContainerStyle={styles.browseContent}
+            contentContainerStyle={[styles.browseContent, { paddingBottom: bottomSpace }]}
             showsVerticalScrollIndicator={false}
           >
             {EDM_GENRES.map((genre) => {
@@ -209,7 +211,7 @@ function SearchScreen() {
               data={filteredDJs}
               keyExtractor={(item) => item.id}
               renderItem={renderDJItem}
-              contentContainerStyle={{ padding: 20, paddingTop: 10 }}
+              contentContainerStyle={{ padding: 20, paddingTop: 10, paddingBottom: bottomSpace }}
               ListEmptyComponent={<Text style={styles.emptyText}>No DJs found</Text>}
               style={{
                 flex: 1,
@@ -253,7 +255,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, color: '#222' },
 
   // Browse mode (big cards)
-  browseContent: { paddingHorizontal: 20, paddingBottom: 30 },
+  browseContent: { paddingHorizontal: 20 },
   genreCardWrap: {
     borderRadius: 24,
     marginBottom: 16,

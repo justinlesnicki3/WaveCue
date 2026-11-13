@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   Image,
   ImageBackground,
+  LayoutAnimation,
   useWindowDimensions,
 } from 'react-native';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,6 +32,10 @@ import { deleteClipFromPlaylist } from '../services/playlistService';
 const BG = '#0e0e12';
 const PLAY_RED = '#e62117';
 
+// YouTube requires embedded players to be at least 200 x 200
+const MIN_PLAYER_SIZE = 200;
+const END_CHECK_MS = 400; // how often we check whether the clip's end time was reached
+
 function formatTime(value) {
   const sec = toSecondsMaybe(value);
   const h = Math.floor(sec / 3600);
@@ -44,13 +50,46 @@ export default function ClipPlayerScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const { clips = [], startIndex = 0, playlistName } = route.params ?? {};
 
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   const currentClip = getCurrentClip(clips, currentIndex);
 
   const { removeClipFromPlaylist } = useAppContext();
+
+  // In-app YouTube player state
+  const playerRef = useRef(null);
+  const [playerOpen, setPlayerOpen] = useState(false); // card has turned into the player
+  const [playing, setPlaying] = useState(false);
+  const [ended, setEnded] = useState(false); // reached the clip's end time
+  const [playerError, setPlayerError] = useState(null); // e.g. 'embed_not_allowed'
+
+  const startSec = toSecondsMaybe(currentClip?.start);
+  const endSec = toSecondsMaybe(currentClip?.end);
+
+  // Switching clips: keep the player open (and auto-play) if it was already open
+  useEffect(() => {
+    setEnded(false);
+    setPlayerError(null);
+    setPlaying(playerOpen);
+  }, [currentIndex]);
+
+  // Stop at the clip's end time. YouTube's own `end` setting only applies to the first
+  // play-through, so we check the time ourselves (this also covers Replay).
+  useEffect(() => {
+    if (!playing || !playerOpen || !(endSec > startSec)) return;
+    const timer = setInterval(async () => {
+      try {
+        const t = await playerRef.current?.getCurrentTime();
+        if (t != null && t >= endSec) {
+          setPlaying(false);
+          setEnded(true);
+        }
+      } catch {}
+    }, END_CHECK_MS);
+    return () => clearInterval(timer);
+  }, [playing, playerOpen, startSec, endSec]);
 
   const backButton = (
     <TouchableOpacity
@@ -76,17 +115,45 @@ export default function ClipPlayerScreen() {
   const dj = findDjForSetTitle(currentClip.djSetTitle);
   const backdrop = dj?.image ?? { uri: thumbnailUri };
 
-  const startSec = toSecondsMaybe(currentClip.start);
-  const endSec = toSecondsMaybe(currentClip.end);
-
   const isFirst = currentIndex === 0;
   const isLast = currentIndex >= clips.length - 1;
 
-  const handlePlay = async () => {
+  // Player fills the card width at 16:9, but never below YouTube's 200px minimum
+  const playerW = Math.max(MIN_PLAYER_SIZE, width - 40);
+  const playerH = Math.max(MIN_PLAYER_SIZE, Math.round((playerW * 9) / 16));
+
+  const handlePlay = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setPlayerOpen(true);
+    setEnded(false);
+    setPlaying(true);
+  };
+
+  const handleReplay = () => {
+    setEnded(false);
+    playerRef.current?.seekTo(startSec, true);
+    setPlaying(true);
+  };
+
+  // Backup for videos that can't play inside the app
+  const handleOpenInYouTube = async () => {
+    setPlaying(false);
     try {
       await openClipInYouTube(currentClip);
     } catch (e) {
-      console.log('PLAY failed', e?.message ?? e);
+      console.log('Open in YouTube failed', e?.message ?? e);
+    }
+  };
+
+  const onPlayerStateChange = (state) => {
+    if (state === 'playing') {
+      setPlaying(true);
+      setEnded(false);
+    } else if (state === 'paused') {
+      setPlaying(false);
+    } else if (state === 'ended') {
+      setPlaying(false);
+      setEnded(true);
     }
   };
 
@@ -97,7 +164,7 @@ export default function ClipPlayerScreen() {
       {/* ---------- Hero: DJ photo fading into the dark background ---------- */}
       <ImageBackground
         source={backdrop}
-        style={[styles.hero, { height: height * 0.55 }]}
+        style={[styles.hero, { height: height * (playerOpen ? 0.4 : 0.55) }]}
         resizeMode="cover"
       >
         <LinearGradient
@@ -138,20 +205,75 @@ export default function ClipPlayerScreen() {
 
       {backButton}
 
-      {/* ---------- Thumbnail + play ---------- */}
+      {/* ---------- Thumbnail + play, which turns into the in-app player ---------- */}
       <View style={styles.body}>
-        <View style={styles.playRow}>
-          <Image source={{ uri: thumbnailUri }} style={styles.thumbnail} />
+        {!playerOpen ? (
+          <View style={styles.playRow}>
+            <Image source={{ uri: thumbnailUri }} style={styles.thumbnail} />
 
-          <View style={styles.playInfo}>
-            <Text style={styles.playLabel}>Play clip</Text>
-            <Text style={styles.playSub}>Opens YouTube at {formatTime(startSec)}</Text>
+            <View style={styles.playInfo}>
+              <Text style={styles.playLabel}>Play clip</Text>
+              <Text style={styles.playSub}>
+                Plays {formatTime(startSec)} – {formatTime(endSec)}
+              </Text>
+            </View>
+
+            <TouchableOpacity style={styles.playButton} onPress={handlePlay} activeOpacity={0.85}>
+              <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
           </View>
+        ) : playerError ? (
+          <View style={[styles.playerFallback, { height: playerH }]}>
+            <Ionicons name="logo-youtube" size={36} color={PLAY_RED} />
+            <Text style={styles.fallbackTitle}>This set can't play inside WaveCue</Text>
+            <Text style={styles.fallbackSub}>
+              {playerError === 'embed_not_allowed'
+                ? "The channel doesn't allow playback in other apps."
+                : 'Something went wrong loading the video.'}
+            </Text>
+            <TouchableOpacity style={styles.fallbackButton} onPress={handleOpenInYouTube}>
+              <Text style={styles.fallbackButtonText}>Open in YouTube at {formatTime(startSec)}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <View style={[styles.playerWrap, { height: playerH }]}>
+              <YoutubePlayer
+                key={currentClip.id ?? `${currentClip.videoId}-${currentIndex}`}
+                ref={playerRef}
+                width={playerW}
+                height={playerH}
+                videoId={currentClip.videoId}
+                play={playing}
+                forceAndroidAutoplay
+                initialPlayerParams={{
+                  start: Math.floor(startSec),
+                  ...(endSec > startSec ? { end: Math.ceil(endSec) } : {}),
+                  rel: false,
+                }}
+                onChangeState={onPlayerStateChange}
+                onError={(e) => setPlayerError(e)}
+              />
+            </View>
 
-          <TouchableOpacity style={styles.playButton} onPress={handlePlay} activeOpacity={0.85}>
-            <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-        </View>
+            <View style={styles.playerActions}>
+              {ended ? (
+                <TouchableOpacity style={styles.replayButton} onPress={handleReplay}>
+                  <Ionicons name="refresh" size={16} color="#fff" />
+                  <Text style={styles.replayText}>Replay clip</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.playSub}>
+                  Clip {formatTime(startSec)} – {formatTime(endSec)}
+                </Text>
+              )}
+
+              <TouchableOpacity onPress={handleOpenInYouTube} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.openInYouTube}>Open in YouTube</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         {!!playlistName && (
           <View style={styles.playlistRow}>
@@ -279,6 +401,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  playerWrap: { borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' },
+  playerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingHorizontal: 4,
+  },
+  replayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#23232b',
+  },
+  replayText: { color: '#fff', fontSize: 13, fontWeight: '600', marginLeft: 6 },
+  openInYouTube: { color: '#8a8a96', fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
+
+  playerFallback: {
+    borderRadius: 12,
+    backgroundColor: '#1b1b22',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  fallbackTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginTop: 10, textAlign: 'center' },
+  fallbackSub: { color: '#8a8a96', fontSize: 13, marginTop: 4, textAlign: 'center' },
+  fallbackButton: {
+    marginTop: 14,
+    backgroundColor: PLAY_RED,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  fallbackButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   playlistRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingHorizontal: 4 },
   playlistText: { color: '#8a8a96', fontSize: 13, marginLeft: 6, flex: 1 },

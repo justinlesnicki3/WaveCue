@@ -58,9 +58,17 @@ export default function ClipPlayerOverlay() {
     if (navigationRef.isReady()) navigationRef.navigate('ClipPlayer', { resume: true });
   };
 
+  // The containers must never be optimized away ("flattened") by React Native: if the
+  // wrapper switched between flattened and real views when going full <-> mini, Android
+  // would move the WebView to a new parent and destroy it, stopping the video. So both are
+  // collapsable={false}, and the same style keys are set in both modes (only values change).
   return (
-    <View style={[styles.container, position, mini && styles.miniCard]} pointerEvents="box-none">
-      <View style={[styles.video, { width, height }]}>
+    <View
+      collapsable={false}
+      style={[styles.container, position, mini ? styles.miniCard : styles.fullCard]}
+      pointerEvents="box-none"
+    >
+      <View collapsable={false} style={[styles.video, { width, height }]}>
         <YoutubePlayer
           key={currentClip.id ?? currentClip.videoId}
           ref={playerRef}
@@ -105,17 +113,16 @@ export default function ClipPlayerOverlay() {
 const hit = { top: 8, bottom: 8, left: 6, right: 6 };
 
 const styles = StyleSheet.create({
-  container: { position: 'absolute' },
-  miniCard: {
+  container: {
+    position: 'absolute',
     borderRadius: 12,
-    backgroundColor: '#16161c',
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 12,
   },
+  // same keys in both, only values differ (see the note in the component)
+  fullCard: { backgroundColor: 'transparent', shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
+  miniCard: { backgroundColor: '#16161c', shadowOpacity: 0.4, shadowRadius: 10, elevation: 12 },
   video: { borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' },
   strip: {
     flexDirection: 'row',

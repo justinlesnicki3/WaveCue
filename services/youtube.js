@@ -67,11 +67,11 @@ export const searchDJSets = async (djName, options = {}) => {
     const { data: detailsData } = await axios.get(VIDEO_DETAILS_URL, {
       signal,
       params: {
-        part: 'contentDetails,snippet,liveStreamingDetails',
+        part: 'contentDetails,snippet',
         id: videoIds,
         key: API_KEY,
         fields:
-          'items(id,contentDetails/duration,snippet(title,channelId,channelTitle,publishedAt,liveBroadcastContent,thumbnails(high,medium,default)),liveStreamingDetails(actualStartTime,scheduledStartTime))',
+          'items(id,contentDetails/duration,snippet(title,channelId,channelTitle,publishedAt,liveBroadcastContent,thumbnails(high,medium,default)))',
       },
     });
 
@@ -85,8 +85,8 @@ export const searchDJSets = async (djName, options = {}) => {
       const duration = parseISO8601Duration(video.contentDetails?.duration);
       const title = video.snippet?.title || '';
       const channel = video.snippet?.channelTitle || '';
-      if (isLivestream(video)) {
-        console.log('!! Skipped (livestream):', title);
+      if (isLiveOrUpcoming(video)) {
+        console.log('!! Skipped (live now / upcoming):', title);
         return false;
       }
       return duration >= 50 && isLikelySet(title, channel, djName);
@@ -132,11 +132,11 @@ export const searchDJSets = async (djName, options = {}) => {
 
 /* ----------------------- helpers ----------------------- */
 
-// Live now, scheduled to go live, or a recording of a past livestream
-const isLivestream = video => {
+// Live right now, or scheduled to go live. Recordings of past livestreams are fine:
+// plenty of real sets are streamed live by the venue/festival channel first.
+const isLiveOrUpcoming = video => {
   const status = video.snippet?.liveBroadcastContent;
-  if (status === 'live' || status === 'upcoming') return true;
-  return !!video.liveStreamingDetails;
+  return status === 'live' || status === 'upcoming';
 };
 
 // Map of channelId -> subscriber count. Channels that hide their count are left out.
@@ -180,11 +180,10 @@ const blacklist = [
   'preview',
   'ufo',
   'what',
-  'livestream',
-  'live stream',
   'overwatch',
   'treatment',
   'opioid',
+  'cubano',
 ];
 
 const setKeywords = [

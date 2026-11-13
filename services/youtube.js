@@ -7,8 +7,12 @@ const SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const VIDEO_DETAILS_URL = 'https://www.googleapis.com/youtube/v3/videos';
 
 // Public entry
+// options.publishedAfter: ISO date string; only return videos published after it
+// options.order: YouTube sort order, e.g. 'date' for newest first (default: relevance)
+// options.throwOnError: rethrow request failures instead of returning [] (so callers can
+//   tell "no results" apart from "request failed")
 export const searchDJSets = async (djName, options = {}) => {
-  const { signal } = options;
+  const { signal, publishedAfter, order, throwOnError = false } = options;
 
   if (!API_KEY) {
     console.error('!! YOUTUBE_API_KEY is missing');
@@ -28,6 +32,8 @@ export const searchDJSets = async (djName, options = {}) => {
           q: djName,
           type: 'video',
           maxResults: 25,
+          publishedAfter,
+          order,
           pageToken: nextPageToken,
           key: API_KEY,
           fields: 'items(id/videoId,snippet(title,channelTitle,publishedAt,thumbnails/high/url)),nextPageToken',
@@ -96,6 +102,7 @@ export const searchDJSets = async (djName, options = {}) => {
     } else {
       console.error('YouTube API error:', error.response?.data || error.message);
     }
+    if (throwOnError) throw error;
     return [];
   }
 };

@@ -10,6 +10,9 @@ import { searchDJSets } from './services/youtube';
 
 export const AppContext = createContext();
 
+// How far back the New Sets screen looks
+const NEW_SET_WINDOW_DAYS = 45;
+
 function normalizeName(name) {
   return (name || '').trim().toLowerCase();
 }
@@ -429,15 +432,29 @@ export const AppProvider = ({ children }) => {
   };
 
   // ---------- YouTube refresh ----------
+  // New Sets = every set published in the last NEW_SET_WINDOW_DAYS by a subscribed DJ.
+  // Each refresh rebuilds the list, so sets drop off once they age past the window.
   const refreshTrackedDJs = async (djList) => {
-    if (!Array.isArray(djList) || djList.length === 0) return;
+    if (!Array.isArray(djList) || djList.length === 0) {
+      setNewSets([]);
+      return;
+    }
 
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
+    cutoff.setDate(cutoff.getDate() - NEW_SET_WINDOW_DAYS);
+
+    const found = new Map();
+    let anySucceeded = false;
 
     for (const dj of djList) {
       try {
-        const results = await searchDJSets(dj.name);
+        // ask YouTube for recent uploads only, newest first
+        const results = await searchDJSets(dj.name, {
+          publishedAfter: cutoff.toISOString(),
+          order: 'date',
+          throwOnError: true,
+        });
+        anySucceeded = true;
 
         for (const set of results) {
           const fullSet = { ...set, djName: (dj.name || '').toLowerCase() };
@@ -446,21 +463,17 @@ export const AppProvider = ({ children }) => {
             prev.some((s) => s.id === fullSet.id) ? prev : [...prev, fullSet]
           );
 
-          const publishDate = new Date(set.publishDate);
-          const subscribeDate = new Date(dj.subscribeDate);
-
-          const isNew = publishDate >= cutoff || publishDate >= subscribeDate;
-
-          if (isNew) {
-            setNewSets((prev) =>
-              prev.some((s) => s.id === fullSet.id) ? prev : [...prev, fullSet]
-            );
+          if (new Date(set.publishDate) >= cutoff) {
+            found.set(fullSet.id, fullSet);
           }
         }
       } catch (err) {
         console.warn(`⚠️ Failed to fetch for ${dj.name}:`, err?.message || err);
       }
     }
+
+    // if every request failed (e.g. offline), keep showing the previous list
+    if (anySucceeded) setNewSets(Array.from(found.values()));
   };
 
   useEffect(() => {

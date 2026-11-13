@@ -188,6 +188,18 @@ const blacklist = [
   'techhouse',
 ];
 
+// Artists whose sets should never show up. Matched as whole words, any capitalization,
+// so short names don't block longer words that happen to contain them.
+const blockedArtists = ['guu'];
+const blockedArtistPattern = new RegExp(
+  `(^|[^a-z0-9])(${blockedArtists.join('|')})(?=$|[^a-z0-9])`,
+  'i'
+);
+
+// Emoji anywhere in the title (mostly fan / AI "style" compilations): pictographs,
+// faces, flags, symbols & dingbats, and the emoji presentation selector (e.g. ☀️)
+const emojiPattern = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
+
 const setKeywords = [
     '@',
   'live',
@@ -234,12 +246,16 @@ const isLikelySet = (title, channelTitle, djName) => {
     lowerTitle.includes(lowerDJName) || lowerChannel.includes(lowerDJName);
   const hasSetKeyword = setKeywords.some(k => lowerTitle.includes(k));
   const hasBlacklisted = blacklist.some(b => lowerTitle.includes(b));
+  const hasBlockedArtist = blockedArtistPattern.test(title || '');
+  const hasEmoji = emojiPattern.test(title || '');
 
   if (!hasDJName) console.log('!! Skipped (no DJ name):', title);
   else if (!hasSetKeyword) console.log('!! Skipped (no keyword):', title);
   else if (hasBlacklisted) console.log('!! Skipped (blacklisted):', title);
+  else if (hasBlockedArtist) console.log('!! Skipped (blocked artist):', title);
+  else if (hasEmoji) console.log('!! Skipped (emoji in title):', title);
 
-  return hasDJName && hasSetKeyword && !hasBlacklisted;
+  return hasDJName && hasSetKeyword && !hasBlacklisted && !hasBlockedArtist && !hasEmoji;
 };
 
 const parseISO8601Duration = duration => {

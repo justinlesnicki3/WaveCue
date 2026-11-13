@@ -184,6 +184,8 @@ const blacklist = [
   'treatment',
   'opioid',
   'cubano',
+  'tech house',
+  'techhouse',
 ];
 
 const setKeywords = [

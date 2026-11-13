@@ -5,12 +5,16 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
 import React, {useState, useEffect} from 'react';
 import { supabase } from './lib/supabase';
 
 import { AppProvider } from './AppContext';
+import { ClipPlaybackProvider } from './context/ClipPlaybackContext';
+import ClipPlayerOverlay from './components/ClipPlayerOverlay';
+import { navigationRef } from './navigation/navigationRef';
 import SearchScreen from './screens/SearchScreen';
 import MyDJsScreen from './screens/MyDJsScreen';
 import NewSetsScreen from './screens/NewSetsScreen';
@@ -120,8 +124,11 @@ export default function App() {
 
   return (
   <GestureHandlerRootView style={{ flex: 1}}>
+    <SafeAreaProvider>
     <AppProvider>
-      <NavigationContainer>
+    {/* keyed to the user so signing out stops any clip that's playing */}
+    <ClipPlaybackProvider key={session?.user?.id ?? 'signed-out'}>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator screenOptions={{headerShown: false}}>
           {session ? (
           <>
@@ -151,8 +158,12 @@ export default function App() {
             </>
           )}
         </Stack.Navigator>
+        {/* the app's one YouTube player: full size on the clip screen, mini player elsewhere */}
+        {session && <ClipPlayerOverlay />}
       </NavigationContainer>
+    </ClipPlaybackProvider>
     </AppProvider>
+    </SafeAreaProvider>
   </GestureHandlerRootView>
   );
 }

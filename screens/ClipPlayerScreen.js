@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,12 @@ import {
   TouchableOpacity,
   Image,
   ImageBackground,
-  LayoutAnimation,
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
-import YoutubePlayer from 'react-native-youtube-iframe';
 import { CLIP_PLAYBACK } from '../config/playback';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useClipPlayback } from '../context/ClipPlaybackContext';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -20,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../AppContext';
 
 import {
-  getCurrentClip,
   nextIndex,
   prevIndex,
   openClipInYouTube,
@@ -36,7 +34,6 @@ const PLAY_RED = '#e62117';
 
 // YouTube requires embedded players to be at least 200 x 200
 const MIN_PLAYER_SIZE = 200;
-const END_CHECK_MS = 400; // how often we check whether the clip's end time was reached
 
 function formatTime(value) {
   const sec = toSecondsMaybe(value);
@@ -53,45 +50,62 @@ export default function ClipPlayerScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { clips = [], startIndex = 0, playlistName } = route.params ?? {};
-
-  const [currentIndex, setCurrentIndex] = useState(startIndex);
-  const currentClip = getCurrentClip(clips, currentIndex);
+  const params = route.params ?? {};
 
   const { removeClipFromPlaylist } = useAppContext();
 
-  // In-app YouTube player state
-  const playerRef = useRef(null);
-  const [playerOpen, setPlayerOpen] = useState(false); // card has turned into the player
-  const [playing, setPlaying] = useState(false);
-  const [ended, setEnded] = useState(false); // reached the clip's end time
-  const [playerError, setPlayerError] = useState(null); // e.g. 'embed_not_allowed'
+  // Playback lives app-wide (context/ClipPlaybackContext.js) so it can continue in the
+  // mini player after you leave this screen. `resume` = reopened from the mini player.
+  const pb = useClipPlayback();
 
+  useLayoutEffect(() => {
+    if (params.resume) return;
+    pb.startSession({
+      clips: params.clips ?? [],
+      index: params.startIndex ?? 0,
+      playlistName: params.playlistName,
+    });
+  }, []);
+
+  // Until the session above is in place, show what this screen was opened with
+  const session = params.resume
+    ? pb.session
+    : pb.session && pb.session.clips === params.clips
+      ? pb.session
+      : { clips: params.clips ?? [], index: params.startIndex ?? 0, playlistName: params.playlistName };
+
+  const clips = session?.clips ?? [];
+  const currentIndex = session?.index ?? 0;
+  const playlistName = session?.playlistName;
+  const currentClip = clips[currentIndex] ?? null;
+
+  const playerOpen = pb.open;
+  const { playing, ended, error: playerError } = pb;
   const startSec = toSecondsMaybe(currentClip?.start);
   const endSec = toSecondsMaybe(currentClip?.end);
 
-  // Switching clips: keep the player open (and auto-play) if it was already open
-  useEffect(() => {
-    setEnded(false);
-    setPlayerError(null);
-    setPlaying(playerOpen);
-  }, [currentIndex]);
+  // Tell the app-wide player where to draw itself on this screen. Measured on layout and
+  // again once the slide-in animation finishes; cleared when you leave, which shrinks the
+  // player to the mini player.
+  const slotRef = useRef(null);
+  const measureSlot = useCallback(() => {
+    slotRef.current?.measureInWindow((x, y, w, h) => {
+      if (w > 0 && h > 0) pb.setSlot({ x, y, width: w, height: h });
+    });
+  }, [pb.setSlot]);
 
-  // Stop at the clip's end time. YouTube's own `end` setting only applies to the first
-  // play-through, so we check the time ourselves (this also covers Replay).
-  useEffect(() => {
-    if (!playing || !playerOpen || !(endSec > startSec)) return;
-    const timer = setInterval(async () => {
-      try {
-        const t = await playerRef.current?.getCurrentTime();
-        if (t != null && t >= endSec) {
-          setPlaying(false);
-          setEnded(true);
-        }
-      } catch {}
-    }, END_CHECK_MS);
-    return () => clearInterval(timer);
-  }, [playing, playerOpen, startSec, endSec]);
+  useFocusEffect(
+    useCallback(() => {
+      measureSlot();
+      const unsubscribe = navigation.addListener('transitionEnd', (e) => {
+        if (!e?.data?.closing) measureSlot();
+      });
+      return () => {
+        unsubscribe();
+        pb.setSlot(null);
+      };
+    }, [measureSlot, navigation, pb.setSlot])
+  );
 
   const backButton = (
     <TouchableOpacity
@@ -132,57 +146,33 @@ export default function ClipPlayerScreen() {
     .filter(({ clip }) => clip.videoId === currentClip.videoId)
     .sort((a, b) => toSecondsMaybe(a.clip.start) - toSecondsMaybe(b.clip.start));
 
-  const openPlayer = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setPlayerOpen(true);
-    setEnded(false);
-    setPlaying(true);
-  };
-
   const handlePlay = () => {
-    if (inApp) openPlayer();
+    if (inApp) pb.play();
     else handleOpenInYouTube();
   };
 
   // Picking a clip from "From this set" switches to it and starts it playing
   const handleSelectSetClip = (index) => {
     if (index === currentIndex) {
-      if (inApp && !playerOpen) openPlayer();
-      else if (inApp && ended) handleReplay();
+      if (inApp && !playerOpen) pb.play();
+      else if (inApp && ended) pb.replay();
       return;
     }
-    setCurrentIndex(index);
-    if (inApp && !playerOpen) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setPlayerOpen(true);
-    }
+    pb.selectIndex(index);
+    if (inApp && !playerOpen) pb.play();
   };
 
-  const handleReplay = () => {
-    setEnded(false);
-    playerRef.current?.seekTo(startSec, true);
-    setPlaying(true);
+  const goToIndex = (index) => {
+    if (index !== currentIndex) pb.selectIndex(index);
   };
 
   // Backup for videos that can't play inside the app
   const handleOpenInYouTube = async () => {
-    setPlaying(false);
+    pb.pause();
     try {
       await openClipInYouTube(currentClip);
     } catch (e) {
       console.log('Open in YouTube failed', e?.message ?? e);
-    }
-  };
-
-  const onPlayerStateChange = (state) => {
-    if (state === 'playing') {
-      setPlaying(true);
-      setEnded(false);
-    } else if (state === 'paused') {
-      setPlaying(false);
-    } else if (state === 'ended') {
-      setPlaying(false);
-      setEnded(true);
     }
   };
 
@@ -268,28 +258,17 @@ export default function ClipPlayerScreen() {
           </View>
         ) : (
           <>
-            <View style={[styles.playerWrap, { height: playerH }]}>
-              <YoutubePlayer
-                key={currentClip.id ?? `${currentClip.videoId}-${currentIndex}`}
-                ref={playerRef}
-                width={playerW}
-                height={playerH}
-                videoId={currentClip.videoId}
-                play={playing}
-                forceAndroidAutoplay
-                initialPlayerParams={{
-                  start: Math.floor(startSec),
-                  ...(endSec > startSec ? { end: Math.ceil(endSec) } : {}),
-                  rel: false,
-                }}
-                onChangeState={onPlayerStateChange}
-                onError={(e) => setPlayerError(e)}
-              />
-            </View>
+            {/* Empty slot: the app-wide player (components/ClipPlayerOverlay.js) is drawn here */}
+            <View
+              ref={slotRef}
+              onLayout={measureSlot}
+              collapsable={false}
+              style={[styles.playerWrap, { width: playerW, height: playerH }]}
+            />
 
             <View style={styles.playerActions}>
               {ended ? (
-                <TouchableOpacity style={styles.replayButton} onPress={handleReplay}>
+                <TouchableOpacity style={styles.replayButton} onPress={pb.replay}>
                   <Ionicons name="refresh" size={16} color="#fff" />
                   <Text style={styles.replayText}>Replay clip</Text>
                 </TouchableOpacity>
@@ -356,7 +335,7 @@ export default function ClipPlayerScreen() {
         <View style={[styles.controls, { paddingBottom: insets.bottom + 20 }]}>
           <TouchableOpacity
             style={styles.control}
-            onPress={() => setCurrentIndex((i) => prevIndex(i))}
+            onPress={() => goToIndex(prevIndex(currentIndex))}
           >
             <View style={[styles.controlCircle, isFirst && styles.dimmed]}>
               <Ionicons name="play-skip-back" size={24} color="#fff" />
@@ -366,14 +345,15 @@ export default function ClipPlayerScreen() {
 
           <TouchableOpacity
             style={styles.control}
-            onPress={() =>
+            onPress={() => {
+              pb.close(); // stop the clip being deleted
               deleteClipFromPlaylist({
                 clip: currentClip,
                 playlistName,
                 removeClipFromPlaylist,
                 navigation,
-              })
-            }
+              });
+            }}
           >
             <View style={[styles.controlCircle, styles.deleteCircle]}>
               <Ionicons name="trash-outline" size={24} color="#ff5a52" />
@@ -383,7 +363,7 @@ export default function ClipPlayerScreen() {
 
           <TouchableOpacity
             style={styles.control}
-            onPress={() => setCurrentIndex((i) => nextIndex(i, clips.length))}
+            onPress={() => goToIndex(nextIndex(currentIndex, clips.length))}
           >
             <View style={[styles.controlCircle, isLast && styles.dimmed]}>
               <Ionicons name="play-skip-forward" size={24} color="#fff" />

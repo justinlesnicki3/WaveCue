@@ -5,6 +5,10 @@ import { YOUTUBE_API_KEY } from '@env';
 const API_KEY = YOUTUBE_API_KEY;
 const SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const VIDEO_DETAILS_URL = 'https://www.googleapis.com/youtube/v3/videos';
+const CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
+
+// Skip uploads from channels smaller than this (filters out most fan re-uploads)
+const MIN_CHANNEL_SUBSCRIBERS = 100;
 
 // Public entry
 // options.publishedAfter: ISO date string; only return videos published after it
@@ -63,11 +67,11 @@ export const searchDJSets = async (djName, options = {}) => {
     const { data: detailsData } = await axios.get(VIDEO_DETAILS_URL, {
       signal,
       params: {
-        part: 'contentDetails,snippet',
+        part: 'contentDetails,snippet,liveStreamingDetails',
         id: videoIds,
         key: API_KEY,
         fields:
-          'items(id,contentDetails/duration,snippet(title,channelTitle,publishedAt,thumbnails(high,medium,default)))',
+          'items(id,contentDetails/duration,snippet(title,channelId,channelTitle,publishedAt,liveBroadcastContent,thumbnails(high,medium,default)),liveStreamingDetails(actualStartTime,scheduledStartTime))',
       },
     });
 
@@ -81,10 +85,29 @@ export const searchDJSets = async (djName, options = {}) => {
       const duration = parseISO8601Duration(video.contentDetails?.duration);
       const title = video.snippet?.title || '';
       const channel = video.snippet?.channelTitle || '';
+      if (isLivestream(video)) {
+        console.log('!! Skipped (livestream):', title);
+        return false;
+      }
       return duration >= 50 && isLikelySet(title, channel, djName);
     });
 
-    return longSets.map(video => ({
+    // Drop uploads from tiny channels (mostly fan re-uploads). One batched request.
+    const subscribers = await fetchSubscriberCounts(
+      longSets.map(v => v.snippet?.channelId),
+      signal
+    );
+    const fromRealChannels = longSets.filter(video => {
+      const count = subscribers.get(video.snippet?.channelId);
+      // undefined = channel hides its count (or wasn't returned); give it the benefit of the doubt
+      if (count !== undefined && count < MIN_CHANNEL_SUBSCRIBERS) {
+        console.log(`!! Skipped (channel has ${count} subscribers):`, video.snippet?.title);
+        return false;
+      }
+      return true;
+    });
+
+    return fromRealChannels.map(video => ({
       id: video.id, 
       videoId: video.id,
       title: video.snippet.title,
@@ -109,6 +132,38 @@ export const searchDJSets = async (djName, options = {}) => {
 
 /* ----------------------- helpers ----------------------- */
 
+// Live now, scheduled to go live, or a recording of a past livestream
+const isLivestream = video => {
+  const status = video.snippet?.liveBroadcastContent;
+  if (status === 'live' || status === 'upcoming') return true;
+  return !!video.liveStreamingDetails;
+};
+
+// Map of channelId -> subscriber count. Channels that hide their count are left out.
+const fetchSubscriberCounts = async (channelIds, signal) => {
+  const ids = [...new Set(channelIds.filter(Boolean))];
+  const counts = new Map();
+
+  // the API accepts up to 50 ids per request
+  for (let i = 0; i < ids.length; i += 50) {
+    const { data } = await axios.get(CHANNELS_URL, {
+      signal,
+      params: {
+        part: 'statistics',
+        id: ids.slice(i, i + 50).join(','),
+        key: API_KEY,
+        fields: 'items(id,statistics(subscriberCount,hiddenSubscriberCount))',
+      },
+    });
+    for (const ch of data.items || []) {
+      if (ch.statistics?.hiddenSubscriberCount) continue;
+      const n = Number(ch.statistics?.subscriberCount);
+      if (Number.isFinite(n)) counts.set(ch.id, n);
+    }
+  }
+  return counts;
+};
+
 const blacklist = [
   'interview',
   'reaction',
@@ -125,6 +180,11 @@ const blacklist = [
   'preview',
   'ufo',
   'what',
+  'livestream',
+  'live stream',
+  'overwatch',
+  'treatment',
+  'opioid',
 ];
 
 const setKeywords = [
@@ -142,7 +202,6 @@ const setKeywords = [
   'edc',
   'coachella',
   'ultra',
-  'live stream',
   'concert',
   'performance',
   'closing set',
@@ -157,7 +216,6 @@ const setKeywords = [
   'burning man',
   'fabric',
   'mixmag',
-  'stream',
   'live mix',
   'club space',
   'ushuaïa',

@@ -7,9 +7,11 @@ import {
   Image,
   ImageBackground,
   LayoutAnimation,
+  ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
+import { CLIP_PLAYBACK } from '../config/playback';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -122,11 +124,38 @@ export default function ClipPlayerScreen() {
   const playerW = Math.max(MIN_PLAYER_SIZE, width - 40);
   const playerH = Math.max(MIN_PLAYER_SIZE, Math.round((playerW * 9) / 16));
 
-  const handlePlay = () => {
+  const inApp = CLIP_PLAYBACK === 'in-app';
+
+  // Other clips in this playlist from the same set (same YouTube video), in set order
+  const setClips = clips
+    .map((clip, index) => ({ clip, index }))
+    .filter(({ clip }) => clip.videoId === currentClip.videoId)
+    .sort((a, b) => toSecondsMaybe(a.clip.start) - toSecondsMaybe(b.clip.start));
+
+  const openPlayer = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setPlayerOpen(true);
     setEnded(false);
     setPlaying(true);
+  };
+
+  const handlePlay = () => {
+    if (inApp) openPlayer();
+    else handleOpenInYouTube();
+  };
+
+  // Picking a clip from "From this set" switches to it and starts it playing
+  const handleSelectSetClip = (index) => {
+    if (index === currentIndex) {
+      if (inApp && !playerOpen) openPlayer();
+      else if (inApp && ended) handleReplay();
+      return;
+    }
+    setCurrentIndex(index);
+    if (inApp && !playerOpen) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setPlayerOpen(true);
+    }
   };
 
   const handleReplay = () => {
@@ -214,7 +243,9 @@ export default function ClipPlayerScreen() {
             <View style={styles.playInfo}>
               <Text style={styles.playLabel}>Play clip</Text>
               <Text style={styles.playSub}>
-                Plays {formatTime(startSec)} – {formatTime(endSec)}
+                {inApp
+                  ? `Plays ${formatTime(startSec)} – ${formatTime(endSec)}`
+                  : `Opens YouTube at ${formatTime(startSec)}`}
               </Text>
             </View>
 
@@ -275,14 +306,51 @@ export default function ClipPlayerScreen() {
           </>
         )}
 
-        {!!playlistName && (
-          <View style={styles.playlistRow}>
-            <Ionicons name="list" size={16} color="#8a8a96" />
-            <Text style={styles.playlistText} numberOfLines={1}>
-              {playlistName}
-            </Text>
-          </View>
-        )}
+        <ScrollView style={styles.middle} showsVerticalScrollIndicator={false}>
+          {!!playlistName && (
+            <View style={styles.playlistRow}>
+              <Ionicons name="list" size={16} color="#8a8a96" />
+              <Text style={styles.playlistText} numberOfLines={1}>
+                {playlistName}
+              </Text>
+            </View>
+          )}
+
+          {/* ---------- Other clips from the same set ---------- */}
+          {setClips.length > 1 && (
+            <View style={styles.setSection}>
+              <Text style={styles.sectionTitle}>From this set · {setClips.length} clips</Text>
+              {setClips.map(({ clip, index }) => {
+                const isCurrent = index === currentIndex;
+                const s = toSecondsMaybe(clip.start);
+                const e = toSecondsMaybe(clip.end);
+                return (
+                  <TouchableOpacity
+                    key={clip.id ?? `${clip.videoId}-${index}`}
+                    style={[styles.setClipRow, isCurrent && styles.setClipRowActive]}
+                    onPress={() => handleSelectSetClip(index)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={isCurrent && playing ? 'volume-high' : 'play-circle'}
+                      size={22}
+                      color={isCurrent ? PLAY_RED : '#8a8a96'}
+                    />
+                    <View style={styles.setClipText}>
+                      <Text style={[styles.setClipTitle, isCurrent && styles.setClipTitleActive]} numberOfLines={1}>
+                        {clip.title}
+                      </Text>
+                      <Text style={styles.setClipTime}>
+                        {formatTime(s)} – {formatTime(e)} · {clipDurationLabel(s, e)}
+                      </Text>
+                    </View>
+                    {isCurrent && <Text style={styles.nowTag}>NOW</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
 
         {/* ---------- Previous / Delete / Next ---------- */}
         <View style={[styles.controls, { paddingBottom: insets.bottom + 20 }]}>
@@ -438,6 +506,33 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   fallbackButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  middle: { flex: 1, marginBottom: 12 },
+  setSection: { marginTop: 14 },
+  sectionTitle: {
+    color: '#c9c9d4',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  setClipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#16161c',
+    marginBottom: 6,
+  },
+  setClipRowActive: { backgroundColor: '#23232b' },
+  setClipText: { flex: 1, marginLeft: 10 },
+  setClipTitle: { color: '#d6d6de', fontSize: 14, fontWeight: '600' },
+  setClipTitleActive: { color: '#fff' },
+  setClipTime: { color: '#8a8a96', fontSize: 12, marginTop: 2 },
+  nowTag: { color: PLAY_RED, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginLeft: 8 },
 
   playlistRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingHorizontal: 4 },
   playlistText: { color: '#8a8a96', fontSize: 13, marginLeft: 6, flex: 1 },

@@ -1,4 +1,5 @@
-import { Linking, Platform } from 'react-native';
+import { Linking } from 'react-native';
+import { YOUTUBE_LINK_STYLE } from '../config/playback';
 
 /**
  * Preferred usage:
@@ -18,15 +19,19 @@ export async function openYouTubeAt({ videoId, start = 0 }) {
   if (!videoId) throw new Error('Missing videoId');
 
   const t = Math.max(0, Math.floor(Number(start) || 0));
+  const id = encodeURIComponent(videoId);
 
-  // iOS uses vnd.youtube scheme commonly; android often accepts it too.
-  const appUrl =
-    Platform.OS === 'ios'
-      ? `vnd.youtube://${encodeURIComponent(videoId)}?t=${t}`
-      : `vnd.youtube://${encodeURIComponent(videoId)}?t=${t}`;
+  // Standard web link: opens the YouTube app when installed, otherwise the browser
+  const webUrl = `https://www.youtube.com/watch?v=${id}&t=${t}s`;
 
-  // Web fallback
-  const webUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&t=${t}`;
+  // 'web' link style ("plan A", see config/playback.js): skip the app scheme entirely
+  if (YOUTUBE_LINK_STYLE === 'web') {
+    await Linking.openURL(webUrl);
+    return;
+  }
+
+  // vnd.youtube scheme works on both iOS and Android
+  const appUrl = `vnd.youtube://${id}?t=${t}`;
 
   // Try app first
   const canOpenApp = await Linking.canOpenURL(appUrl);

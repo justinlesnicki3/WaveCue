@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 
 import NightSky from '../components/welcome/NightSky'
-import Island, { ISLAND_VIEW_W, ISLAND_VIEW_H } from '../components/welcome/Island'
+import Island, { ISLAND_VIEW_W, ISLAND_VIEW_H, ISLAND_SPOTS } from '../components/welcome/Island'
+import Hippie, { Smoke, HIPPIE_VIEW, JOINT_TIP } from '../components/welcome/Hippie'
 import LakeWaves from '../components/welcome/LakeWaves'
 
 const WATERLINE = 0.66 // fraction of screen height where the sea starts
@@ -21,6 +22,20 @@ export default function WelcomeScreen() {
     const waterTop = height * WATERLINE
     const islandW = Math.min(width * 0.92, 420)
     const islandH = (islandW / ISLAND_VIEW_W) * ISLAND_VIEW_H
+    const islandLeft = (width - islandW) / 2
+    const islandTop = waterTop - islandH + ISLAND_SINK
+    const islandScale = islandW / ISLAND_VIEW_W
+
+    // the hippie sits on the island's free spot (grid units -> screen)
+    const hippieSize = 76 * islandScale
+    const seatX = islandLeft + ISLAND_SPOTS.seat.x * islandScale
+    const seatY = islandTop + ISLAND_SPOTS.seat.y * islandScale
+    const hippieLeft = seatX - hippieSize / 2
+    const hippieTop = seatY - hippieSize
+    // smoke starts at the joint and drifts up to just under the title
+    const smokeX = hippieLeft + (JOINT_TIP.x / HIPPIE_VIEW) * hippieSize
+    const smokeY = hippieTop + (JOINT_TIP.y / HIPPIE_VIEW) * hippieSize
+    const smokeRise = smokeY - (insets.top + 110)
 
     return (
         <View style={styles.container}>
@@ -29,14 +44,14 @@ export default function WelcomeScreen() {
             <NightSky width={width} height={waterTop} />
 
             {/* island on the horizon; the sea is drawn after it so the waves cover its base */}
-            <View
-                style={[
-                    styles.island,
-                    { left: (width - islandW) / 2, top: waterTop - islandH + ISLAND_SINK },
-                ]}
-                pointerEvents="none"
-            >
+            <View style={[styles.island, { left: islandLeft, top: islandTop }]} pointerEvents="none">
                 <Island width={islandW} />
+            </View>
+
+            {/* smoke rising toward the title, then the hippie swaying on the island */}
+            <Smoke x={smokeX} y={smokeY} rise={smokeRise} puffSize={Math.max(8, 10 * islandScale)} />
+            <View style={[styles.island, { left: hippieLeft, top: hippieTop }]} pointerEvents="none">
+                <Hippie size={hippieSize} />
             </View>
 
             <View style={[styles.lake, { top: waterTop }]}>

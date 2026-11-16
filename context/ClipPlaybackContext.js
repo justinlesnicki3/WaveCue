@@ -7,6 +7,8 @@ import { toSecondsMaybe } from '../services/clipPlayerService';
 // mini player in the corner everywhere else.
 
 const END_CHECK_MS = 400; // how often we check whether the clip's end time was reached
+// If a clip hasn't started this long after Play, nudge it again (see the watchdog below)
+const START_RETRY_MS = [2000, 4500];
 
 const ClipPlaybackContext = createContext(null);
 
@@ -29,6 +31,40 @@ export function ClipPlaybackProvider({ children }) {
   const currentClip = session?.clips?.[session.index] ?? null;
   const startSec = toSecondsMaybe(currentClip?.start);
   const endSec = toSecondsMaybe(currentClip?.end);
+
+  // ---------- One-press play ----------
+  // Pressing Play should start the clip without also tapping YouTube's own play button.
+  // Besides the normal play command, we "kick" the player by seeking to the clip's start:
+  // YouTube starts playback when you seek a video that's waiting to be played, and seeking
+  // goes through a different, reliable channel. Done when the player reports ready, and by a
+  // watchdog if the video still hasn't started a few seconds after Play.
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
+  const startSecRef = useRef(startSec);
+  startSecRef.current = startSec;
+  const ytStateRef = useRef(null); // last state YouTube reported
+
+  const kickPlayback = useCallback(() => {
+    playerRef.current?.seekTo(startSecRef.current, true);
+  }, []);
+
+  const onReady = useCallback(() => {
+    ytStateRef.current = null;
+    if (playingRef.current) kickPlayback();
+  }, [kickPlayback]);
+
+  const clipKey = currentClip ? currentClip.id ?? currentClip.videoId : null;
+  useEffect(() => {
+    if (!open || !playing) return;
+    const timers = START_RETRY_MS.map((ms) =>
+      setTimeout(() => {
+        const s = ytStateRef.current;
+        const started = s === 'playing' || s === 'buffering' || s === 'paused' || s === 'ended';
+        if (playingRef.current && !started) kickPlayback();
+      }, ms)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [open, playing, clipKey, kickPlayback]);
 
   // Stop at the clip's end time. YouTube's own `end` setting only applies to the first
   // play-through, so we check the time ourselves (this also covers Replay).
@@ -98,6 +134,7 @@ export function ClipPlaybackProvider({ children }) {
   }, []);
 
   const onStateChange = useCallback((state) => {
+    ytStateRef.current = state;
     if (state === 'playing') {
       setPlaying(true);
       setEnded(false);
@@ -129,6 +166,7 @@ export function ClipPlaybackProvider({ children }) {
     replay,
     close,
     onStateChange,
+    onReady,
   };
 
   return <ClipPlaybackContext.Provider value={value}>{children}</ClipPlaybackContext.Provider>;

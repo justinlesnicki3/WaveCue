@@ -146,6 +146,7 @@ export default function ClipPlayerOverlay() {
     pause,
     close,
     onStateChange,
+    onReady,
   } = useClipPlayback();
 
   const mini = !slot;
@@ -245,6 +246,7 @@ export default function ClipPlayerOverlay() {
           }}
           webViewProps={{ injectedJavaScriptBeforeContentLoaded: PLAYER_PAGE_JS }}
           onChangeState={onStateChange}
+          onReady={onReady}
           onError={(e) => setError(e)}
         />
       </View>

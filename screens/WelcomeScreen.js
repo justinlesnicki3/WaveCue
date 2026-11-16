@@ -2,7 +2,6 @@ import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
-import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 
 import NightSky from '../components/welcome/NightSky'
@@ -71,7 +70,6 @@ export default function WelcomeScreen() {
                     onPress={() => navigation.navigate('Sign Up')}
                 >
                     <Text style={styles.startText}>Start Cueing</Text>
-                    <Ionicons name="arrow-forward" size={26} color="#0b1d3a" style={{ marginLeft: 10 }} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -125,14 +123,12 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     startButton: {
-        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#5ec2ff',
         paddingVertical: 15,
         paddingHorizontal: 34,
         borderRadius: 32,
-        borderWidth: 2.5,
-        borderColor: '#0b1d3a',
         shadowColor: '#000',
         shadowOpacity: 0.35,
         shadowRadius: 8,

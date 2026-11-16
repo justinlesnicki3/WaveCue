@@ -66,21 +66,42 @@ export function ClipPlaybackProvider({ children }) {
     return () => timers.forEach(clearTimeout);
   }, [open, playing, clipKey, kickPlayback]);
 
-  // Stop at the clip's end time. YouTube's own `end` setting only applies to the first
+  // ---------- Playlist continuation ----------
+  // When a clip reaches its end, play the next clip in the session (like a playlist in
+  // Apple Music); after the last one, stop and offer Replay. Both our end-time check and
+  // YouTube's own "ended" event land here, so each clip's end is handled only once
+  // (otherwise the two together would skip a clip).
+  const endedKeyRef = useRef(null);
+  const handleClipEnd = useCallback(() => {
+    const s = sessionRef.current;
+    const clip = s?.clips?.[s.index];
+    const key = clip ? clip.id ?? clip.videoId : null;
+    if (!key || endedKeyRef.current === key) return;
+    endedKeyRef.current = key;
+
+    if (s.index < s.clips.length - 1) {
+      setSession({ ...s, index: s.index + 1 });
+      setEnded(false);
+      setError(null);
+      setPlaying(true);
+    } else {
+      setPlaying(false);
+      setEnded(true);
+    }
+  }, []);
+
+  // Watch for the clip's end time. YouTube's own `end` setting only applies to the first
   // play-through, so we check the time ourselves (this also covers Replay).
   useEffect(() => {
     if (!open || !playing || !(endSec > startSec)) return;
     const timer = setInterval(async () => {
       try {
         const t = await playerRef.current?.getCurrentTime();
-        if (t != null && t >= endSec) {
-          setPlaying(false);
-          setEnded(true);
-        }
+        if (t != null && t >= endSec) handleClipEnd();
       } catch {}
     }, END_CHECK_MS);
     return () => clearInterval(timer);
-  }, [open, playing, startSec, endSec]);
+  }, [open, playing, startSec, endSec, handleClipEnd]);
 
   // Called when the clip screen opens. Keeps playing if it's the clip already loaded
   // (e.g. reopening from the mini player); otherwise loads the new clip, not yet playing.
@@ -92,6 +113,7 @@ export function ClipPlaybackProvider({ children }) {
       prevClip && nextClip && (prevClip.id ?? prevClip.videoId) === (nextClip.id ?? nextClip.videoId);
 
     if (!sameClip) {
+      endedKeyRef.current = null;
       setOpen(false);
       setPlaying(false);
       setEnded(false);
@@ -103,6 +125,7 @@ export function ClipPlaybackProvider({ children }) {
   // Switch to another clip in the session; plays straight away if the player is open
   const selectIndex = useCallback(
     (index) => {
+      endedKeyRef.current = null;
       setSession((prev) => (prev ? { ...prev, index } : prev));
       setEnded(false);
       setError(null);
@@ -112,6 +135,7 @@ export function ClipPlaybackProvider({ children }) {
   );
 
   const play = useCallback(() => {
+    endedKeyRef.current = null;
     setOpen(true);
     setEnded(false);
     setPlaying(true);
@@ -120,6 +144,7 @@ export function ClipPlaybackProvider({ children }) {
   const pause = useCallback(() => setPlaying(false), []);
 
   const replay = useCallback(() => {
+    endedKeyRef.current = null;
     setEnded(false);
     playerRef.current?.seekTo(startSec, true);
     setPlaying(true);
@@ -141,10 +166,9 @@ export function ClipPlaybackProvider({ children }) {
     } else if (state === 'paused') {
       setPlaying(false);
     } else if (state === 'ended') {
-      setPlaying(false);
-      setEnded(true);
+      handleClipEnd();
     }
-  }, []);
+  }, [handleClipEnd]);
 
   const value = {
     playerRef,

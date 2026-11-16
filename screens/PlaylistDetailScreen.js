@@ -1,5 +1,15 @@
-import React, { useMemo, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -13,7 +23,7 @@ function norm(s) {
 }
 
 export default function PlaylistDetailScreen() {
-  const { playlists, removeClipFromPlaylist } = useAppContext();
+  const { playlists, removeClipFromPlaylist, renamePlaylist } = useAppContext();
   const playback = useClipPlayback();
   const route = useRoute();
   const navigation = useNavigation();
@@ -24,6 +34,41 @@ export default function PlaylistDetailScreen() {
   const onRowWillOpen = (row) => {
     if (openRowRef.current && openRowRef.current !== row) openRowRef.current.close();
     openRowRef.current = row;
+  };
+
+  // Rename: the pencil turns the title into a text field with save / cancel
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
+  const startRename = () => {
+    setDraftName(playlistName);
+    setEditingName(true);
+  };
+
+  const cancelRename = () => {
+    setEditingName(false);
+    setDraftName('');
+  };
+
+  const saveRename = async () => {
+    if (savingName) return;
+    const next = draftName.trim();
+    if (!next || next === playlistName) {
+      cancelRename();
+      return;
+    }
+    setSavingName(true);
+    try {
+      const saved = await renamePlaylist(playlistName, next);
+      // this screen looks its playlist up by name, so follow the new name
+      navigation.setParams({ playlistName: saved });
+      setEditingName(false);
+    } catch (e) {
+      Alert.alert('Could not rename playlist', e?.message ?? 'Please try again.');
+    } finally {
+      setSavingName(false);
+    }
   };
 
   const deleteClip = async (clip) => {
@@ -188,7 +233,45 @@ function formatTime(value) {
         >
           <Ionicons name="chevron-back" size={26} color="#111" />
         </TouchableOpacity>
-        <Text style={styles.header}>{playlist.name}</Text>
+
+        {editingName ? (
+          <>
+            <TextInput
+              style={[styles.header, styles.nameInput]}
+              value={draftName}
+              onChangeText={setDraftName}
+              autoFocus
+              selectTextOnFocus
+              maxLength={60}
+              returnKeyType="done"
+              onSubmitEditing={saveRename}
+              editable={!savingName}
+              placeholder="Playlist name"
+              placeholderTextColor="#9aa3c7"
+            />
+            {savingName ? (
+              <ActivityIndicator color="#33498e" style={styles.headerIcon} />
+            ) : (
+              <>
+                <TouchableOpacity onPress={saveRename} hitSlop={hit} style={styles.headerIcon}>
+                  <Ionicons name="checkmark" size={26} color="#33498e" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={cancelRename} hitSlop={hit} style={styles.headerIcon}>
+                  <Ionicons name="close" size={24} color="#888" />
+                </TouchableOpacity>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={[styles.header, styles.headerTitle]} numberOfLines={1}>
+              {playlist.name}
+            </Text>
+            <TouchableOpacity onPress={startRename} hitSlop={hit} style={styles.headerIcon}>
+              <Ionicons name="pencil" size={20} color="#33498e" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={styles.buttonRow}>
@@ -214,6 +297,8 @@ function formatTime(value) {
   );
 }
 
+const hit = { top: 10, bottom: 10, left: 10, right: 10 };
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
   headerRow: {
@@ -226,6 +311,18 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: 'bold',
     color: '#33498e',
+  },
+  headerTitle: { flex: 1 },
+  headerIcon: { padding: 4 },
+  // same height as the title so the header doesn't jump when editing starts
+  nameInput: {
+    flex: 1,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    includeFontPadding: false,
+    borderBottomWidth: 2,
+    borderBottomColor: '#33498e',
+    marginBottom: -2, // the underline sits below the text instead of pushing it
   },
   buttonRow: {
     flexDirection: 'row',

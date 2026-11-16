@@ -314,6 +314,37 @@ export const AppProvider = ({ children }) => {
     setPlaylists((prev) => prev.filter((p) => p.id !== match.id));
   };
 
+  // Rename a playlist. Names are unique per user (case-insensitive here, and the
+  // user_id + name constraint in the database), so a clashing name is rejected.
+  const renamePlaylist = async (oldNameRaw, newNameRaw) => {
+    const userId = await getUserId();
+    if (!userId) throw new Error('Not logged in');
+
+    const oldName = (oldNameRaw || '').trim();
+    const newName = (newNameRaw || '').trim();
+    if (!newName) throw new Error('Playlist name can’t be empty.');
+
+    const match = playlists.find((p) => p.name.toLowerCase() === oldName.toLowerCase());
+    if (!match?.id) throw new Error('Playlist not found.');
+    if (newName === match.name) return match.name; // nothing changed
+
+    const taken = playlists.some(
+      (p) => p.id !== match.id && p.name.toLowerCase() === newName.toLowerCase()
+    );
+    if (taken) throw new Error(`You already have a playlist called "${newName}".`);
+
+    const { error } = await supabase
+      .from('playlists')
+      .update({ name: newName })
+      .eq('user_id', userId)
+      .eq('id', match.id);
+
+    if (error) throw error;
+
+    setPlaylists((prev) => prev.map((p) => (p.id === match.id ? { ...p, name: newName } : p)));
+    return newName;
+  };
+
   // ---------- Clips ----------
   const addLeak = async (leak) => {
     const userId = await getUserId();
@@ -421,13 +452,14 @@ export const AppProvider = ({ children }) => {
 
     if (error) throw error;
 
-    const playlistName = (playlistNameRaw || '').trim().toLowerCase();
-
+    // Clip ids are unique, so remove it wherever it is. (Matching by playlist name
+    // would miss it if the playlist was renamed while the clip player was open.)
     setPlaylists((prev) =>
-      prev.map((p) => {
-        if (playlistName && p.name.toLowerCase() !== playlistName) return p;
-        return { ...p, clips: (p.clips || []).filter((c) => c.id !== clipId) };
-      })
+      prev.map((p) =>
+        p.clips?.some((c) => c.id === clipId)
+          ? { ...p, clips: p.clips.filter((c) => c.id !== clipId) }
+          : p
+      )
     );
   };
 
@@ -529,6 +561,7 @@ export const AppProvider = ({ children }) => {
         addClipToPlaylist,
         removeClipFromPlaylist,
         removePlaylist,
+        renamePlaylist,
 
         currentClip,
         setCurrentClip,

@@ -186,15 +186,17 @@ const blacklist = [
   'cubano',
   'tech house',
   'techhouse',
+  'workout',
 ];
 
-// Artists whose sets should never show up. Matched as whole words, any capitalization,
-// so short names don't block longer words that happen to contain them.
+// Blocked as whole words only, any capitalization, so they don't hit longer words that
+// happen to contain them (e.g. "style" must not block the artist Max Styler).
 const blockedArtists = ['guu'];
-const blockedArtistPattern = new RegExp(
-  `(^|[^a-z0-9])(${blockedArtists.join('|')})(?=$|[^a-z0-9])`,
-  'i'
-);
+const blockedWholeWords = ['style', 'styles'];
+const wholeWordPattern = (words) =>
+  new RegExp(`(^|[^a-z0-9])(${words.join('|')})(?=$|[^a-z0-9])`, 'i');
+const blockedArtistPattern = wholeWordPattern(blockedArtists);
+const blockedWordPattern = wholeWordPattern(blockedWholeWords);
 
 // Emoji anywhere in the title (mostly fan / AI "style" compilations): pictographs,
 // faces, flags, symbols & dingbats, and the emoji presentation selector (e.g. ☀️)
@@ -245,7 +247,8 @@ const isLikelySet = (title, channelTitle, djName) => {
   const hasDJName =
     lowerTitle.includes(lowerDJName) || lowerChannel.includes(lowerDJName);
   const hasSetKeyword = setKeywords.some(k => lowerTitle.includes(k));
-  const hasBlacklisted = blacklist.some(b => lowerTitle.includes(b));
+  const hasBlacklisted =
+    blacklist.some(b => lowerTitle.includes(b)) || blockedWordPattern.test(title || '');
   const hasBlockedArtist = blockedArtistPattern.test(title || '');
   const hasEmoji = emojiPattern.test(title || '');
 

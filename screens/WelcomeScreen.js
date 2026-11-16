@@ -19,7 +19,7 @@ export default function WelcomeScreen() {
 
     // ---------- layout ----------
     const waterTop = height * WATERLINE
-    const islandW = Math.min(width * 0.72, 340)
+    const islandW = Math.min(width * 0.92, 420)
     const islandH = (islandW / ISLAND_VIEW_W) * ISLAND_VIEW_H
 
     return (

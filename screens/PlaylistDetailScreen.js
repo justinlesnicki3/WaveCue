@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useAppContext } from '../AppContext';
+import { useClipPlayback } from '../context/ClipPlaybackContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,10 +13,29 @@ function norm(s) {
 }
 
 export default function PlaylistDetailScreen() {
-  const { playlists } = useAppContext();
+  const { playlists, removeClipFromPlaylist } = useAppContext();
+  const playback = useClipPlayback();
   const route = useRoute();
   const navigation = useNavigation();
   const { playlistName } = route.params;
+
+  // Swipe-to-delete: keep only one row swiped open at a time
+  const openRowRef = useRef(null);
+  const onRowWillOpen = (row) => {
+    if (openRowRef.current && openRowRef.current !== row) openRowRef.current.close();
+    openRowRef.current = row;
+  };
+
+  const deleteClip = async (clip) => {
+    try {
+      // don't leave a deleted clip playing in the player / mini player
+      if (playback.currentClip?.id === clip.id) playback.close();
+      await removeClipFromPlaylist(playlistName, clip.id);
+      openRowRef.current = null;
+    } catch (e) {
+      Alert.alert('Could not delete clip', e?.message ?? 'Please try again.');
+    }
+  };
 
   // Always pull the latest playlist from context
   const playlist = useMemo(() => {
@@ -84,36 +105,61 @@ function formatTime(value) {
   return `${m}:${String(r).padStart(2, '0')}`;
 }
 
-    return (
+    let rowRef = null;
+
+    // Revealed by swiping the clip to the left (like Apple Music); tapping it deletes
+    const renderDeleteAction = () => (
       <TouchableOpacity
-        style={styles.clipTouchable}
-        onPress={() =>
-          navigation.navigate('ClipPlayer', {
-            clips,
-            startIndex: Math.max(idx, 0),
-            playlistName,
-          })
-        }
+        style={styles.swipeDelete}
+        activeOpacity={0.85}
+        onPress={() => deleteClip(item)}
       >
-        <LinearGradient
-          colors={['#33498e', '#5a74e0']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.clipCard}
-        >
-          <View style={styles.cardContent}>
-            <Image source={{ uri: thumbnailURL || '' }} style={styles.thumbnail} />
-            <View style={styles.textContent}>
-              <Text style={styles.clipTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.clipTime}>
-                {formatTime(item.start)} - {formatTime(item.end)}
-              </Text>
-            </View>
-          </View>
-        </LinearGradient>
+        <Ionicons name="trash-outline" size={22} color="#fff" />
+        <Text style={styles.swipeDeleteText}>Delete</Text>
       </TouchableOpacity>
+    );
+
+    return (
+      <Swipeable
+        ref={(r) => {
+          rowRef = r;
+        }}
+        renderRightActions={renderDeleteAction}
+        overshootRight={false}
+        rightThreshold={40}
+        onSwipeableWillOpen={() => onRowWillOpen(rowRef)}
+      >
+        <TouchableOpacity
+          style={styles.clipTouchable}
+          activeOpacity={0.9}
+          onPress={() =>
+            navigation.navigate('ClipPlayer', {
+              clips,
+              startIndex: Math.max(idx, 0),
+              playlistName,
+            })
+          }
+        >
+          <LinearGradient
+            colors={['#33498e', '#5a74e0']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.clipCard}
+          >
+            <View style={styles.cardContent}>
+              <Image source={{ uri: thumbnailURL || '' }} style={styles.thumbnail} />
+              <View style={styles.textContent}>
+                <Text style={styles.clipTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.clipTime}>
+                  {formatTime(item.start)} - {formatTime(item.end)}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -204,6 +250,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   textContent: { flex: 1 },
+  swipeDelete: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 92,
+    marginBottom: 15, // matches clipTouchable so the button lines up with the card
+    marginLeft: 10,
+    borderRadius: 12,
+    backgroundColor: '#FF3B30',
+  },
+  swipeDeleteText: { color: '#fff', fontWeight: '700', fontSize: 13, marginTop: 2 },
   clipTitle: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 4 },
   clipTime: { fontSize: 14, color: '#ccc' },
   empty: { marginTop: 40, textAlign: 'center', color: '#999', fontSize: 16 },

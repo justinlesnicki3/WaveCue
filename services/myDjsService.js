@@ -17,6 +17,7 @@ const djImages = {
   'j. worra': require('../assets/images/jworraMYDJ.webp'),
   'ship wrek': require('../assets/images/shipwrekMYDJ.jpg'),
   'fred again..': require('../assets/images/fredagainMYDJ.jpg'),
+  kettama: require('../assets/images/kettamaMYDJ.jpg'),
 };
 
 const placeholder = require('../assets/images/placeholder.jpg');

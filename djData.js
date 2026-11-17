@@ -17,6 +17,7 @@ import jworraImg from './assets/images/jworra.jpg';
 import shipwrekImg from './assets/images/shipwrek.jpg';
 import fredagainImg from './assets/images/fredagain.jpg';
 import laytongiordaniImg from './assets/images/laytongiordani.jpg';
+import kettamaImg from './assets/images/kettama.jpg';
 
 // Representative artist image per genre, used as the backdrop for the
 // genre browse cards on the Search screen.
@@ -29,7 +30,7 @@ export const GENRE_IMAGES = {
     'Techno': laytongiordaniImg,
     'UK Garage': riordanImg,
     'Trap': shipwrekImg,
-    'Hard House': placeholder,
+    'Hard House': kettamaImg,
     'Jersey Club': placeholder,
 };
 
@@ -241,5 +242,12 @@ export const DJ_DATABASE = [
         image: fredagainImg,
         youtubeQuery: 'Fred again..',
         genres: ['UK Garage', 'Melodic House'],
+    },
+    {
+        id: 'Kettama',
+        name: 'Kettama',
+        image: kettamaImg,
+        youtubeQuery: 'Kettama',
+        genres: ['Hard House', 'UK Garage'],
     },
 ];

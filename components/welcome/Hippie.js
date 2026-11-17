@@ -222,7 +222,7 @@ function ribbonPath(height, t) {
     const y = height * (1 - s);
     // thickness: thin wisp at the bottom, fullest in the middle, tapering at the top, with
     // pinches that travel up the ribbon like twists
-    const body = 1.5 + 15 * Math.pow(Math.sin(Math.PI * Math.pow(s, 0.75)), 1.2);
+    const body = 1.2 + 9.5 * Math.pow(Math.sin(Math.PI * Math.pow(s, 0.75)), 1.2);
     const twist = 0.4 + 0.6 * Math.abs(Math.cos(s * Math.PI * 4.5 - t * 0.8));
     centre.push({ x, y, w: body * twist });
   }

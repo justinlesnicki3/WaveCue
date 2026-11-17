@@ -16,6 +16,7 @@ import gudfellaImg from './assets/images/gudfella.jpg';
 import jworraImg from './assets/images/jworra.jpg';
 import shipwrekImg from './assets/images/shipwrek.jpg';
 import fredagainImg from './assets/images/fredagain.jpg';
+import laytongiordaniImg from './assets/images/laytongiordani.jpg';
 
 // Representative artist image per genre, used as the backdrop for the
 // genre browse cards on the Search screen.
@@ -25,7 +26,7 @@ export const GENRE_IMAGES = {
     'Melodic House': vintagecultureImg,
     'Progressive House': johnsummitImg,
     'Deep House': maupImg,
-    'Techno': clooneeImg,
+    'Techno': laytongiordaniImg,
     'UK Garage': riordanImg,
     'Trap': shipwrekImg,
     'Jersey Club': placeholder,
@@ -151,7 +152,7 @@ export const DJ_DATABASE = [
     {
         id: 'Layton Giordani',
         name: 'Layton Giordani',
-        image: placeholder,
+        image: laytongiordaniImg,
         youtubeQuery: 'Layton Giordani',
         genres: ['Techno'],
     },

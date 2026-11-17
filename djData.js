@@ -18,6 +18,7 @@ import shipwrekImg from './assets/images/shipwrek.jpg';
 import fredagainImg from './assets/images/fredagain.jpg';
 import laytongiordaniImg from './assets/images/laytongiordani.jpg';
 import kettamaImg from './assets/images/kettama.jpg';
+import kettamaCardImg from './assets/images/kettamaCard.jpg';
 
 // Representative artist image per genre, used as the backdrop for the
 // genre browse cards on the Search screen.
@@ -30,7 +31,7 @@ export const GENRE_IMAGES = {
     'Techno': laytongiordaniImg,
     'UK Garage': riordanImg,
     'Trap': shipwrekImg,
-    'Hard House': kettamaImg,
+    'Hard House': kettamaCardImg,
     'Jersey Club': placeholder,
 };
 

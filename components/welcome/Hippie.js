@@ -34,26 +34,26 @@ const SWAY_MS = 1700;
 function buildInk() {
   const rand = seededRandom(424242);
 
-  // hair: an uneven cloud of overlapping blobs around the top and sides of the head
+  // hair: a fairly close-cropped mop of curls hugging the top and sides of the head
   const hairBlobs = [];
-  for (let i = 0; i < 26; i++) {
-    const a = Math.PI * (0.92 + rand() * 1.16); // mostly the upper half, wrapping the sides
-    const dist = 12 + rand() * 9;
+  for (let i = 0; i < 14; i++) {
+    const a = Math.PI * (1.0 + rand() * 1.0); // upper half only
+    const dist = 10.5 + rand() * 3.5;
     hairBlobs.push({
-      x: 60 + Math.cos(a) * dist * 1.15,
-      y: 38 + Math.sin(a) * dist,
-      r: 5 + rand() * 4.5,
+      x: 60 + Math.cos(a) * dist * 1.05,
+      y: 39 + Math.sin(a) * dist,
+      r: 3.6 + rand() * 2.4,
     });
   }
 
   // little curl strokes over the hair ("e" loops), like pen scribbles
   const curls = [];
-  for (let i = 0; i < 46; i++) {
-    const a = Math.PI * (0.9 + rand() * 1.2);
-    const dist = 9 + rand() * 15;
-    const x = 60 + Math.cos(a) * dist * 1.15;
-    const y = 38 + Math.sin(a) * dist;
-    const r = 1.6 + rand() * 1.8;
+  for (let i = 0; i < 22; i++) {
+    const a = Math.PI * (1.0 + rand() * 1.0);
+    const dist = 9 + rand() * 6;
+    const x = 60 + Math.cos(a) * dist * 1.05;
+    const y = 39 + Math.sin(a) * dist;
+    const r = 1.3 + rand() * 1.2;
     const flip = rand() < 0.5 ? 1 : 0;
     curls.push(
       `M${x - r},${y} a${r},${r} 0 1,${flip} ${r * 2},0 a${r * 0.7},${r * 0.7} 0 1,${flip} ${-r * 1.2},${r * 0.4}`
@@ -123,7 +123,7 @@ function HippieArt({ size }) {
 
       {/* hair falling over the forehead and sides */}
       <Path d="M47,36 C48,25 56,22 62,24 C68,22 74,27 74,35 C70,30 64,29 60,31 C55,29 50,31 47,36 Z" fill={HAIR} />
-      <Path d="M46,34 C43,42 44,50 47,56 L49,44 Z M74,34 C77,42 76,50 73,56 L71,44 Z" fill={HAIR} />
+      <Path d="M47.5,34 C46,39 46.5,43 48,46 L49.5,40 Z M72.5,34 C74,39 73.5,43 72,46 L70.5,40 Z" fill={HAIR} />
 
       {/* curl scribbles across the whole head of hair */}
       {ink.curls.map((d, i) => (
@@ -197,46 +197,38 @@ export default function Hippie({ size }) {
   );
 }
 
-// ---------- smoke: a soft trail of wisps drifting up toward the logo ----------
+// ---------- smoke: cartoon curls looping up toward the logo ----------
 const AnimatedPath = Animated.createAnimatedComponent(Path);
-const SMOKE_W = 110; // width of the smoke area; the joint is at its bottom centre
-const FLOW_MS = 5200; // how long the flowing pattern takes to loop
+const SMOKE_W = 120; // width of the smoke area; the joint is at its bottom centre
+const FLOW_MS = 4800; // how long the flowing pattern takes to loop
 
-// Each wisp: how far it wanders side to side, how wiggly it is, stroke width, how bright,
-// and its dash pattern (gaps make the smoke break up as it rises)
-const WISPS = [
-  { amp: 9, freq: 1.5, phase: 0.0, width: 2.2, opacity: 0.8, dash: [70, 30], speed: 2 },
-  { amp: 15, freq: 1.1, phase: 1.4, width: 1.3, opacity: 0.7, dash: [46, 34], speed: 3 },
-  { amp: 21, freq: 0.8, phase: 2.6, width: 3.2, opacity: 0.35, dash: [110, 60], speed: 1 },
-  { amp: 7, freq: 2.2, phase: 0.7, width: 1.0, opacity: 0.6, dash: [28, 22], speed: 4 },
-  { amp: 26, freq: 0.6, phase: 4.1, width: 1.6, opacity: 0.4, dash: [80, 70], speed: 2 },
-];
-// wide, faint, unbroken bands underneath give the trail a hazy body
-const HAZE = [
-  { amp: 12, freq: 0.9, phase: 0.4, width: 9, opacity: 0.1 },
-  { amp: 18, freq: 0.7, phase: 2.2, width: 16, opacity: 0.06 },
+// Each curl: how many loops over its height, how big the loops get, where it starts in its
+// cycle, how much it leans, stroke width, brightness, and dash pattern (gaps that travel up
+// the curl so the smoke looks like it's drifting)
+const CURLS = [
+  { loops: 3, size: 1.75, phase: 0.0, lean: 10, width: 3.2, opacity: 0.9, dash: [150, 45], speed: 1 },
+  { loops: 4, size: 1.45, phase: 2.3, lean: -6, width: 2.0, opacity: 0.55, dash: [95, 60], speed: 2 },
 ];
 
-// A wavy line from the bottom centre up to the top; it widens and curls more as it rises
-// and leans slightly right, like smoke catching a breeze
-function wispPath(height, { amp, freq, phase }) {
+// A loop-de-loop curl rising from the bottom centre: a stretched-out coil that starts as a
+// gentle wiggle at the joint and opens into bigger, rounder loops as it rises
+function curlPath(height, { loops, size, phase, lean }) {
   const cx = SMOKE_W / 2;
-  const pts = [];
-  for (let y = height; y >= 0; y -= 6) {
-    const t = (height - y) / height; // 0 at the joint, 1 at the top
-    const spread = Math.pow(t, 0.75);
-    const x = cx + amp * spread * Math.sin(freq * t * Math.PI * 2 + phase) + 9 * t;
-    pts.push([x, y]);
+  const total = Math.PI * 2 * loops;
+  const rise = height / total; // upward travel per radian
+  const sinP = Math.sin(phase);
+  const cosP = Math.cos(phase);
+  let d = '';
+  for (let th = 0; th <= total; th += 0.1) {
+    const t = th / total; // 0 at the joint, 1 at the top
+    const r = rise * size * (0.3 + 1.0 * t); // loop size grows with height; > rise means it loops
+    const up = rise * th - r * (Math.sin(th + phase) - sinP);
+    const side = r * (Math.cos(th + phase) - cosP) + lean * t;
+    const px = cx + side;
+    const py = height - up;
+    d += `${d ? ' L' : 'M'}${px.toFixed(1)},${py.toFixed(1)}`;
   }
-  // smooth curve through the points (quadratic segments via midpoints)
-  let d = `M${pts[0][0]},${pts[0][1]}`;
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-    const my = (pts[i][1] + pts[i + 1][1]) / 2;
-    d += ` Q${pts[i][0]},${pts[i][1]} ${mx},${my}`;
-  }
-  const last = pts[pts.length - 1];
-  return `${d} L${last[0]},${last[1]}`;
+  return d;
 }
 
 // Smoke rising from (x, y) for `rise` pixels, fading out as it goes
@@ -265,13 +257,7 @@ export function Smoke({ x, y, rise }) {
     };
   }, []);
 
-  const paths = useMemo(
-    () => ({
-      wisps: WISPS.map((w) => wispPath(height, w)),
-      haze: HAZE.map((h) => wispPath(height, h)),
-    }),
-    [height]
-  );
+  const paths = useMemo(() => CURLS.map((c) => curlPath(height, c)), [height]);
 
   const sway = drift.interpolate({ inputRange: [-1, 1], outputRange: ['-2.5deg', '2.5deg'] });
 
@@ -285,41 +271,30 @@ export function Smoke({ x, y, rise }) {
           <Defs>
             {/* bright near the joint, fading to nothing by the top */}
             <LinearGradient id="smokeFade" x1="0" y1={height} x2="0" y2="0" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#e6e9f2" stopOpacity="0.7" />
-              <Stop offset="0.35" stopColor="#d7dbe7" stopOpacity="0.45" />
-              <Stop offset="0.75" stopColor="#c9cedc" stopOpacity="0.15" />
+              <Stop offset="0" stopColor="#eef0f6" stopOpacity="0.85" />
+              <Stop offset="0.4" stopColor="#dde0ea" stopOpacity="0.6" />
+              <Stop offset="0.8" stopColor="#c9cedc" stopOpacity="0.2" />
               <Stop offset="1" stopColor="#c9cedc" stopOpacity="0" />
             </LinearGradient>
           </Defs>
 
-          {paths.haze.map((d, i) => (
-            <Path
-              key={`h${i}`}
-              d={d}
-              fill="none"
-              stroke="url(#smokeFade)"
-              strokeWidth={HAZE[i].width}
-              strokeOpacity={HAZE[i].opacity}
-              strokeLinecap="round"
-            />
-          ))}
-
-          {paths.wisps.map((d, i) => {
-            const w = WISPS[i];
-            const period = w.dash[0] + w.dash[1];
+          {paths.map((d, i) => {
+            const c = CURLS[i];
+            const period = c.dash[0] + c.dash[1];
             return (
               <AnimatedPath
-                key={`w${i}`}
+                key={`c${i}`}
                 d={d}
                 fill="none"
                 stroke="url(#smokeFade)"
-                strokeWidth={w.width}
-                strokeOpacity={w.opacity}
+                strokeWidth={c.width}
+                strokeOpacity={c.opacity}
                 strokeLinecap="round"
-                strokeDasharray={w.dash}
-                // moving the dash offset makes the breaks travel up the wisp (the path starts at
+                strokeLinejoin="round"
+                strokeDasharray={c.dash}
+                // moving the dash offset makes the breaks travel up the curl (the path starts at
                 // the joint); a whole number of periods per loop keeps it seamless
-                strokeDashoffset={flow.interpolate({ inputRange: [0, 1], outputRange: [0, -period * w.speed] })}
+                strokeDashoffset={flow.interpolate({ inputRange: [0, 1], outputRange: [0, -period * c.speed] })}
               />
             );
           })}

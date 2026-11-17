@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
     const islandScale = islandW / ISLAND_VIEW_W
 
     // the hippie sits on the island's free spot (grid units -> screen)
-    const hippieSize = 76 * islandScale
+    const hippieSize = 92 * islandScale
     const seatX = islandLeft + ISLAND_SPOTS.seat.x * islandScale
     const seatY = islandTop + ISLAND_SPOTS.seat.y * islandScale
     const hippieLeft = seatX - hippieSize / 2
@@ -48,7 +48,7 @@ export default function WelcomeScreen() {
             </View>
 
             {/* smoke rising toward the title, then the hippie swaying on the island */}
-            <Smoke x={smokeX} y={smokeY} rise={smokeRise} puffSize={Math.max(8, 10 * islandScale)} />
+            <Smoke x={smokeX} y={smokeY} rise={smokeRise} />
             <View style={[styles.island, { left: hippieLeft, top: hippieTop }]} pointerEvents="none">
                 <Hippie size={hippieSize} />
             </View>

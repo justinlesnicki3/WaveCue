@@ -34,7 +34,7 @@ import {
 const GENRE_IMAGE_OFFSETS = {
     'Tech House': -10,
     'Bass House': 0,
-    'Melodic House': -25,
+    'Melodic House': 0,
     'Progressive House': -20,
     'Deep House': -45,
     'Techno': -55,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import Svg, {
   Path,
@@ -197,69 +197,91 @@ export default function Hippie({ size }) {
   );
 }
 
-// ---------- smoke: cartoon curls looping up toward the logo ----------
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+// ---------- smoke: a cartoon ribbon of smoke wiggling up toward the logo ----------
+// Drawn like classic cartoon cigarette smoke: one soft grey ribbon with a darker outline that
+// starts as a thin wisp at the joint, snakes side to side as it rises, swells and pinches
+// (where the ribbon "twists"), and fades out near the top. The wiggles travel upward, so the
+// smoke looks like it's floating up.
 const SMOKE_W = 120; // width of the smoke area; the joint is at its bottom centre
-const FLOW_MS = 4800; // how long the flowing pattern takes to loop
+const SAMPLES = 80; // points along the ribbon
+const FRAME_MS = 40; // ~25 fps is plenty for slow smoke
+const SPEED = 0.0014; // how fast the wiggles travel up (radians per ms)
 
-// Each curl: how many loops over its height, how big the loops get, where it starts in its
-// cycle, how much it leans, stroke width, brightness, and dash pattern (gaps that travel up
-// the curl so the smoke looks like it's drifting)
-const CURLS = [
-  { loops: 3, size: 1.75, phase: 0.0, lean: 10, width: 3.2, opacity: 0.9, dash: [150, 45], speed: 1 },
-  { loops: 4, size: 1.45, phase: 2.3, lean: -6, width: 2.0, opacity: 0.55, dash: [95, 60], speed: 2 },
-];
-
-// A loop-de-loop curl rising from the bottom centre: a stretched-out coil that starts as a
-// gentle wiggle at the joint and opens into bigger, rounder loops as it rises
-function curlPath(height, { loops, size, phase, lean }) {
+// The ribbon's outline for animation time `t`
+function ribbonPath(height, t) {
   const cx = SMOKE_W / 2;
-  const total = Math.PI * 2 * loops;
-  const rise = height / total; // upward travel per radian
-  const sinP = Math.sin(phase);
-  const cosP = Math.cos(phase);
-  let d = '';
-  for (let th = 0; th <= total; th += 0.1) {
-    const t = th / total; // 0 at the joint, 1 at the top
-    const r = rise * size * (0.3 + 1.0 * t); // loop size grows with height; > rise means it loops
-    const up = rise * th - r * (Math.sin(th + phase) - sinP);
-    const side = r * (Math.cos(th + phase) - cosP) + lean * t;
-    const px = cx + side;
-    const py = height - up;
-    d += `${d ? ' L' : 'M'}${px.toFixed(1)},${py.toFixed(1)}`;
+  const centre = [];
+  for (let i = 0; i <= SAMPLES; i++) {
+    const s = i / SAMPLES; // 0 at the joint, 1 at the top
+    // side-to-side snaking: small near the joint, wider as it rises; minus t = travels up
+    const amp = 4 + 26 * Math.sqrt(s);
+    const wig =
+      Math.sin(s * Math.PI * 6.5 - t) * 0.75 +
+      Math.sin(s * Math.PI * 11 - t * 1.5 + 1.3) * 0.3;
+    const x = cx + amp * wig + 6 * s; // slight lean to the right
+    const y = height * (1 - s);
+    // thickness: thin wisp at the bottom, fullest in the middle, tapering at the top, with
+    // pinches that travel up the ribbon like twists
+    const body = 1.5 + 15 * Math.pow(Math.sin(Math.PI * Math.pow(s, 0.75)), 1.2);
+    const twist = 0.4 + 0.6 * Math.abs(Math.cos(s * Math.PI * 4.5 - t * 0.8));
+    centre.push({ x, y, w: body * twist });
   }
-  return d;
+
+  // offset each point sideways (along the normal) to get the two edges
+  const left = [];
+  const right = [];
+  for (let i = 0; i <= SAMPLES; i++) {
+    const a = centre[Math.max(0, i - 1)];
+    const b = centre[Math.min(SAMPLES, i + 1)];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const { x, y, w } = centre[i];
+    left.push([x + nx * w, y + ny * w]);
+    right.push([x - nx * w, y - ny * w]);
+  }
+
+  // up one edge and back down the other, smoothed with curves through the midpoints
+  const pts = left.concat(right.reverse());
+  const f = (n) => n.toFixed(1);
+  let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [x1, y1] = pts[i];
+    const [x2, y2] = pts[i + 1];
+    d += ` Q${f(x1)},${f(y1)} ${f((x1 + x2) / 2)},${f((y1 + y2) / 2)}`;
+  }
+  const last = pts[pts.length - 1];
+  return `${d} L${f(last[0])},${f(last[1])} Z`;
 }
 
-// Smoke rising from (x, y) for `rise` pixels, fading out as it goes
+// Smoke rising from (x, y) for `rise` pixels
 export function Smoke({ x, y, rise }) {
   const height = Math.max(40, rise);
-  const flow = useRef(new Animated.Value(0)).current;
+  const [t, setT] = useState(0);
   const drift = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // dashes flowing up the wisps
-    const flowLoop = Animated.loop(
-      Animated.timing(flow, { toValue: 1, duration: FLOW_MS, easing: Easing.linear, useNativeDriver: false })
-    );
-    // the whole trail sways slowly, like it's trembling in the air
+    // the wiggles travel up the ribbon
+    const start = Date.now();
+    const timer = setInterval(() => setT((Date.now() - start) * SPEED), FRAME_MS);
+    // the whole trail sways a little in the air
     const driftLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(drift, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(drift, { toValue: -1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(drift, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(drift, { toValue: -1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ])
     );
-    flowLoop.start();
     driftLoop.start();
     return () => {
-      flowLoop.stop();
+      clearInterval(timer);
       driftLoop.stop();
     };
   }, []);
 
-  const paths = useMemo(() => CURLS.map((c) => curlPath(height, c)), [height]);
-
-  const sway = drift.interpolate({ inputRange: [-1, 1], outputRange: ['-2.5deg', '2.5deg'] });
+  const d = useMemo(() => ribbonPath(height, t), [height, t]);
+  const sway = drift.interpolate({ inputRange: [-1, 1], outputRange: ['-2deg', '2deg'] });
 
   return (
     <View
@@ -269,35 +291,27 @@ export function Smoke({ x, y, rise }) {
       <Animated.View style={{ flex: 1, transformOrigin: 'bottom', transform: [{ rotate: sway }] }}>
         <Svg width={SMOKE_W} height={height}>
           <Defs>
-            {/* bright near the joint, fading to nothing by the top */}
-            <LinearGradient id="smokeFade" x1="0" y1={height} x2="0" y2="0" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#eef0f6" stopOpacity="0.85" />
-              <Stop offset="0.4" stopColor="#dde0ea" stopOpacity="0.6" />
-              <Stop offset="0.8" stopColor="#c9cedc" stopOpacity="0.2" />
-              <Stop offset="1" stopColor="#c9cedc" stopOpacity="0" />
+            {/* soft grey body, solid near the joint and fading out by the top */}
+            <LinearGradient id="smokeFill" x1="0" y1={height} x2="0" y2="0" gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor="#d6d8de" stopOpacity="0.8" />
+              <Stop offset="0.55" stopColor="#c9ccd4" stopOpacity="0.62" />
+              <Stop offset="0.85" stopColor="#bfc3cc" stopOpacity="0.25" />
+              <Stop offset="1" stopColor="#bfc3cc" stopOpacity="0" />
+            </LinearGradient>
+            <LinearGradient id="smokeEdge" x1="0" y1={height} x2="0" y2="0" gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor="#9da1ab" stopOpacity="0.95" />
+              <Stop offset="0.6" stopColor="#9da1ab" stopOpacity="0.7" />
+              <Stop offset="0.9" stopColor="#9da1ab" stopOpacity="0.15" />
+              <Stop offset="1" stopColor="#9da1ab" stopOpacity="0" />
             </LinearGradient>
           </Defs>
-
-          {paths.map((d, i) => {
-            const c = CURLS[i];
-            const period = c.dash[0] + c.dash[1];
-            return (
-              <AnimatedPath
-                key={`c${i}`}
-                d={d}
-                fill="none"
-                stroke="url(#smokeFade)"
-                strokeWidth={c.width}
-                strokeOpacity={c.opacity}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray={c.dash}
-                // moving the dash offset makes the breaks travel up the curl (the path starts at
-                // the joint); a whole number of periods per loop keeps it seamless
-                strokeDashoffset={flow.interpolate({ inputRange: [0, 1], outputRange: [0, -period * c.speed] })}
-              />
-            );
-          })}
+          <Path
+            d={d}
+            fill="url(#smokeFill)"
+            stroke="url(#smokeEdge)"
+            strokeWidth={1.4}
+            strokeLinejoin="round"
+          />
         </Svg>
       </Animated.View>
     </View>

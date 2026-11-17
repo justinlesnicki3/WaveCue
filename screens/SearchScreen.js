@@ -32,7 +32,7 @@ import {
 // Fine-tune vertical crop per genre. Negative = shift image up (reveals more
 // of the top/face). Positive = shift down. Adjust per-image as needed.
 const GENRE_IMAGE_OFFSETS = {
-    'Tech House': -10,
+    'Tech House': -22,
     'Bass House': 0,
     'Melodic House': 0,
     'Progressive House': -20,

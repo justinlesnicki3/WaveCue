@@ -11,7 +11,7 @@ import clooneeImg from './assets/images/cloonee.jpg';
 import disclosureImg from './assets/images/disclosureImg.avif';
 import discipImg from './assets/images/discipImg.webp';
 import genesiImg from './assets/images/genesi.jpg';
-import maxstylerImg from './assets/images/maxstyler.webp';
+import maxstylerImg from './assets/images/maxstyler.jpg';
 import gudfellaImg from './assets/images/gudfella.jpg';
 import jworraImg from './assets/images/jworra.jpg';
 import shipwrekImg from './assets/images/shipwrek.jpg';
@@ -21,7 +21,7 @@ import laytongiordaniImg from './assets/images/laytongiordani.jpg';
 // Representative artist image per genre, used as the backdrop for the
 // genre browse cards on the Search screen.
 export const GENRE_IMAGES = {
-    'Tech House': fisherImg,
+    'Tech House': maxstylerImg,
     'Bass House': oddmobImg,
     'Melodic House': vintagecultureImg,
     'Progressive House': johnsummitImg,

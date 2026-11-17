@@ -29,6 +29,7 @@ export const GENRE_IMAGES = {
     'Techno': laytongiordaniImg,
     'UK Garage': riordanImg,
     'Trap': shipwrekImg,
+    'Hard House': placeholder,
     'Jersey Club': placeholder,
 };
 
@@ -40,6 +41,7 @@ export const EDM_GENRES = [
     'Deep House',
     'Techno',
     'UK Garage',
+    'Hard House',
 ];
 
 export const DJ_DATABASE = [

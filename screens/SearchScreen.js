@@ -40,6 +40,7 @@ const GENRE_IMAGE_OFFSETS = {
     'Techno': -32,
     'UK Garage': 0,
     'Trap': 0,
+    'Hard House': 0,
     'Jersey Club': 0,
 };
 

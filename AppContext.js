@@ -6,8 +6,9 @@ import React, {
   useState,
 } from 'react';
 import { supabase } from './lib/supabase';
-import { searchDJSets, fetchChannelSets } from './services/youtube';
+import { searchDJSets, fetchChannelSets, fetchSourceChannelSets } from './services/youtube';
 import { DJ_DATABASE } from './djData';
+import { SET_SOURCE_CHANNELS } from './config/setSources';
 
 export const AppContext = createContext();
 
@@ -484,22 +485,41 @@ export const AppProvider = ({ children }) => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - NEW_SET_WINDOW_DAYS);
 
+    const publishedAfter = cutoff.toISOString();
     const found = new Map();
     let anySucceeded = false;
 
+    const addResults = (djName, results) => {
+      for (const set of results) {
+        const fullSet = { ...set, djName: (djName || '').toLowerCase() };
+
+        setDjLibrary((prev) =>
+          prev.some((s) => s.id === fullSet.id) ? prev : [...prev, fullSet]
+        );
+
+        if (new Date(set.publishDate) >= cutoff) {
+          found.set(fullSet.id, fullSet);
+        }
+      }
+    };
+
+    // Three sources, since none catches everything on its own:
+    //  1. the DJ's own channel uploads (their own sets, however busy YouTube gets)
+    //  2. a search for recent long videos (sets posted anywhere, e.g. smaller channels)
+    //  3. the big festival / label channels in config/setSources.js, read once for all DJs
+    //     (festival sets even when a DJ's name is flooded with fan uploads)
     for (const dj of djList) {
       try {
-        const publishedAfter = cutoff.toISOString();
         const channelId = CHANNEL_BY_DJ.get(normalizeName(dj.name));
 
-        // Two sources, since neither catches everything on its own:
-        //  - the DJ's own channel uploads (their own sets, however busy YouTube gets)
-        //  - a search for recent long videos (sets posted by Cercle, Boiler Room, festivals...)
         const [searchResult, channelResult] = await Promise.allSettled([
           searchDJSets(dj.name, {
             publishedAfter,
             order: 'date',
             videoDuration: 'long',
+            // AI "style" mixes and mashups flood some DJs' names; leaving them out lets
+            // the search reach further back
+            excludeTerms: ['style', 'styles', 'mashup'],
             throwOnError: true,
           }),
           channelId
@@ -511,25 +531,25 @@ export const AppProvider = ({ children }) => {
         }
         anySucceeded = true;
 
-        const results = [
+        addResults(dj.name, [
           ...(channelResult.status === 'fulfilled' ? channelResult.value : []),
           ...(searchResult.status === 'fulfilled' ? searchResult.value : []),
-        ];
-
-        for (const set of results) {
-          const fullSet = { ...set, djName: (dj.name || '').toLowerCase() };
-
-          setDjLibrary((prev) =>
-            prev.some((s) => s.id === fullSet.id) ? prev : [...prev, fullSet]
-          );
-
-          if (new Date(set.publishDate) >= cutoff) {
-            found.set(fullSet.id, fullSet);
-          }
-        }
+        ]);
       } catch (err) {
         console.warn(`⚠️ Failed to fetch for ${dj.name}:`, err?.message || err);
       }
+    }
+
+    try {
+      const festivalSets = await fetchSourceChannelSets(
+        SET_SOURCE_CHANNELS,
+        djList.map((dj) => dj.name),
+        { publishedAfter }
+      );
+      for (const [djName, sets] of festivalSets) addResults(djName, sets);
+      if (festivalSets.size) anySucceeded = true;
+    } catch (err) {
+      console.warn('⚠️ Failed to check festival channels:', err?.message || err);
     }
 
     // if every request failed (e.g. offline), keep showing the previous list

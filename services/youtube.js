@@ -16,10 +16,21 @@ const MIN_CHANNEL_SUBSCRIBERS = 100;
 // options.order: YouTube sort order, e.g. 'date' for newest first (default: relevance)
 // options.videoDuration: YouTube length filter, e.g. 'long' (over 20 min) so short uploads
 //   (tracks, lyric videos, clips) don't use up the limited number of results
+// options.excludeTerms: words YouTube should leave out of the results (e.g. ['style']), so
+//   spam uploads don't use up the limited number of results
 // options.throwOnError: rethrow request failures instead of returning [] (so callers can
 //   tell "no results" apart from "request failed")
 export const searchDJSets = async (djName, options = {}) => {
-  const { signal, publishedAfter, order, videoDuration, throwOnError = false } = options;
+  const {
+    signal,
+    publishedAfter,
+    order,
+    videoDuration,
+    excludeTerms = [],
+    throwOnError = false,
+  } = options;
+  // YouTube search understands "-word" as "without this word"
+  const query = [djName, ...excludeTerms.map((t) => `-${t}`)].join(' ');
 
   if (!API_KEY) {
     console.error('!! YOUTUBE_API_KEY is missing');
@@ -36,7 +47,7 @@ export const searchDJSets = async (djName, options = {}) => {
         signal,
         params: {
           part: 'snippet',
-          q: djName,
+          q: query,
           type: 'video',
           maxResults: 25,
           publishedAfter,
@@ -122,6 +133,94 @@ export const fetchChannelSets = async (channelId, djName, options = {}) => {
     if (throwOnError) throw error;
     return [];
   }
+};
+
+// Sets by any of the given DJs posted since publishedAfter on the big festival / label /
+// media channels in config/setSources.js. Each channel's uploads list is read once (not
+// once per DJ) and titles are matched against every DJ name.
+// Returns a Map: DJ name (as given) -> sets.
+export const fetchSourceChannelSets = async (channels, djNames, options = {}) => {
+  const { signal, publishedAfter } = options;
+  const found = new Map();
+  if (!API_KEY || !channels?.length || !djNames?.length) return found;
+
+  const after = publishedAfter ? new Date(publishedAfter).getTime() : 0;
+  // whole-name match, any capitalization ("FISHER" shouldn't match "fisherman")
+  const matchers = djNames.map((name) => ({ name, pattern: nameInTitlePattern(name) }));
+
+  // read every channel's recent uploads in parallel; one failing channel doesn't stop the rest
+  const uploads = await Promise.allSettled(
+    channels.map((c) => recentUploads(c.channelId, after, signal))
+  );
+
+  // DJ name -> ids of uploads whose title mentions that DJ
+  const idsByDj = new Map();
+  uploads.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.warn(`!! Couldn't read ${channels[i].name} uploads:`, result.reason?.message);
+      return;
+    }
+    for (const video of result.value) {
+      for (const { name, pattern } of matchers) {
+        if (!pattern.test(video.title)) continue;
+        if (!idsByDj.has(name)) idsByDj.set(name, []);
+        idsByDj.get(name).push(video.id);
+      }
+    }
+  });
+
+  // run the usual set filters (length, keywords, blacklist...) for each DJ's matches
+  for (const [name, ids] of idsByDj) {
+    try {
+      found.set(name, await videosToSets([...new Set(ids)], name, { signal }));
+    } catch (error) {
+      console.warn(`!! Couldn't check festival uploads for ${name}:`, error?.message);
+    }
+  }
+  return found;
+};
+
+// A channel's uploads published after `after` (ms), newest first: [{ id, title }].
+// Reads up to 4 pages of 50, stopping as soon as it passes the cutoff.
+const recentUploads = async (channelId, after, signal) => {
+  const uploadsPlaylist = 'UU' + channelId.slice(2);
+  const videos = [];
+  let pageToken = null;
+
+  for (let page = 0; page < 4; page++) {
+    const { data } = await axios.get(PLAYLIST_ITEMS_URL, {
+      signal,
+      params: {
+        part: 'snippet,contentDetails',
+        playlistId: uploadsPlaylist,
+        maxResults: 50,
+        pageToken,
+        key: API_KEY,
+        fields: 'items(snippet/title,contentDetails(videoId,videoPublishedAt)),nextPageToken',
+      },
+    });
+
+    let reachedOlder = false;
+    for (const item of data.items || []) {
+      const id = item.contentDetails?.videoId;
+      const published = new Date(item.contentDetails?.videoPublishedAt).getTime();
+      if (after && published < after) {
+        reachedOlder = true;
+        continue;
+      }
+      if (id) videos.push({ id, title: item.snippet?.title || '' });
+    }
+
+    pageToken = data.nextPageToken;
+    if (!pageToken || reachedOlder) break;
+  }
+  return videos;
+};
+
+// Regex that finds a DJ name as a whole name inside a title, any capitalization
+const nameInTitlePattern = (name) => {
+  const escaped = (name || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`, 'i');
 };
 
 // Looks up video details and keeps only the ones that look like real DJ sets.

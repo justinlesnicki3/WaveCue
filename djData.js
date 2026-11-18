@@ -20,6 +20,7 @@ import laytongiordaniImg from './assets/images/laytongiordani.jpg';
 import kettamaImg from './assets/images/kettama.jpg';
 import kettamaCardImg from './assets/images/kettamaCard.jpg';
 import interplanetarycriminalImg from './assets/images/interplanetarycriminal.jpg';
+import interplanetarycriminalCardImg from './assets/images/interplanetarycriminalCard.jpg';
 
 // Representative artist image per genre, used as the backdrop for the
 // genre browse cards on the Search screen.
@@ -30,7 +31,7 @@ export const GENRE_IMAGES = {
     'Progressive House': johnsummitImg,
     'Deep House': maupImg,
     'Techno': laytongiordaniImg,
-    'UK Garage': riordanImg,
+    'UK Garage': interplanetarycriminalCardImg,
     'Trap': shipwrekImg,
     'Hard House': kettamaCardImg,
     'Jersey Club': placeholder,

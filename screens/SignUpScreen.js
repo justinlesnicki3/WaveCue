@@ -1,12 +1,17 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
+import NightSky from '../components/welcome/NightSky'
 import { EyeIcon, EyeSlashIcon, ArrowLeftIcon } from 'react-native-heroicons/solid'
 import { signUpWithEmail } from '../services/authService'
 
 export default function SignUpScreen() {
     const navigation = useNavigation();
+    const { width, height } = useWindowDimensions();
+    // where the title lines sit, so the night sky leaves those spots empty
+    const [titleBox, setTitleBox] = useState(null);
+    const [subtitleBox, setSubtitleBox] = useState(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,14 +41,17 @@ export default function SignUpScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* same twinkling night sky as the Welcome screen */}
+            <NightSky width={width} height={height} avoid={[titleBox, subtitleBox].filter(Boolean)} />
+
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <ArrowLeftIcon size={22} color="#fff" />
             </TouchableOpacity>
 
             <View style={styles.topSpacer} />
 
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>to get started now!</Text>
+            <Text style={styles.title} onLayout={(e) => { const { x, y, width, height } = e.nativeEvent.layout; setTitleBox({ x, y, width, height }); }}>Create Account</Text>
+            <Text style={styles.subtitle} onLayout={(e) => { const { x, y, width, height } = e.nativeEvent.layout; setSubtitleBox({ x, y, width, height }); }}>to get started now!</Text>
 
             <View style={styles.card}>
                 <TextInput
@@ -110,7 +118,7 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0d0d0f', paddingHorizontal: 24 },
+    container: { flex: 1, backgroundColor: '#000', paddingHorizontal: 24 },
     backButton: {
         width: 40,
         height: 40,

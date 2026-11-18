@@ -5,6 +5,18 @@ import { seededRandom } from './seededRandom';
 
 const STATIC_STARS = 70;
 const TWINKLE_STARS = 22;
+const AVOID_PAD = 10; // keep stars at least this far from text they'd sit behind
+
+// true if (x, y) falls inside any of the boxes (plus padding)
+function inAnyBox(x, y, boxes) {
+  return boxes.some(
+    (b) =>
+      x >= b.x - AVOID_PAD &&
+      x <= b.x + b.width + AVOID_PAD &&
+      y >= b.y - AVOID_PAD &&
+      y <= b.y + b.height + AVOID_PAD
+  );
+}
 
 function TwinkleStar({ x, y, size, delay, duration }) {
   const opacity = useRef(new Animated.Value(0.2)).current;
@@ -42,7 +54,10 @@ function TwinkleStar({ x, y, size, delay, duration }) {
 }
 
 // Pitch-black sky with a field of stars, some of which twinkle.
-function NightSky({ width, height }) {
+// `avoid` (optional): boxes { x, y, width, height } in this sky's coordinates where no star
+// should appear, e.g. behind a screen title so the stars don't make the letters hard to read.
+function NightSky({ width, height, avoid = [] }) {
+  const avoidKey = JSON.stringify(avoid);
   const { stars, twinklers } = useMemo(() => {
     const rand = seededRandom(7);
     const stars = Array.from({ length: STATIC_STARS }, () => ({
@@ -58,8 +73,13 @@ function NightSky({ width, height }) {
       delay: Math.floor(rand() * 3000),
       duration: 900 + Math.floor(rand() * 1400),
     }));
-    return { stars, twinklers };
-  }, [width, height]);
+    // drop (rather than move) stars that would sit behind text, so the rest of the sky
+    // keeps exactly the same layout
+    return {
+      stars: stars.filter((s) => !inAnyBox(s.x, s.y, avoid)),
+      twinklers: twinklers.filter((t) => !inAnyBox(t.x, t.y, avoid)),
+    };
+  }, [width, height, avoidKey]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

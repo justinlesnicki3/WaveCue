@@ -19,6 +19,7 @@ import fredagainImg from './assets/images/fredagain.jpg';
 import laytongiordaniImg from './assets/images/laytongiordani.jpg';
 import kettamaImg from './assets/images/kettama.jpg';
 import kettamaCardImg from './assets/images/kettamaCard.jpg';
+import interplanetarycriminalImg from './assets/images/interplanetarycriminal.jpg';
 
 // Representative artist image per genre, used as the backdrop for the
 // genre browse cards on the Search screen.
@@ -278,5 +279,13 @@ export const DJ_DATABASE = [
         youtubeQuery: 'Kettama',
         youtubeChannelId: 'UC8Ux8sqx7e4Z-GQz0QVjPXQ', // official channel (New Sets reads its uploads)
         genres: ['Hard House', 'UK Garage'],
+    },
+    {
+        id: 'Interplanetary Criminal',
+        name: 'Interplanetary Criminal',
+        image: interplanetarycriminalImg,
+        youtubeQuery: 'Interplanetary Criminal',
+        youtubeChannelId: 'UCCr1ACiFCncsPFXDmGzZPbw', // official channel (New Sets reads its uploads)
+        genres: ['UK Garage', 'Hard House'],
     },
 ];

@@ -18,6 +18,7 @@ const djImages = {
   'ship wrek': require('../assets/images/shipwrekMYDJ.jpg'),
   'fred again..': require('../assets/images/fredagainMYDJ.jpg'),
   kettama: require('../assets/images/kettamaMYDJ.jpg'),
+  'interplanetary criminal': require('../assets/images/interplanetarycriminalMYDJ.jpg'),
 };
 
 const placeholder = require('../assets/images/placeholder.jpg');

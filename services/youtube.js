@@ -187,6 +187,8 @@ const blacklist = [
   'tech house',
   'techhouse',
   'workout',
+  '+', // fan-made mashups ("Artist A + Artist B")
+  '＋', // full-width plus, same thing
 ];
 
 // Blocked as whole words only, any capitalization, so they don't hit longer words that

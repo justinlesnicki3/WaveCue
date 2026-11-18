@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
+import NightSky from '../components/welcome/NightSky'
 import { EyeIcon, EyeSlashIcon, ArrowLeftIcon } from 'react-native-heroicons/solid'
 import { signUpWithEmail } from '../services/authService'
 
 export default function SignUpScreen() {
     const navigation = useNavigation();
+    const { width, height } = useWindowDimensions();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,6 +38,9 @@ export default function SignUpScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* same twinkling night sky as the Welcome screen */}
+            <NightSky width={width} height={height} />
+
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <ArrowLeftIcon size={22} color="#fff" />
             </TouchableOpacity>
@@ -110,7 +115,7 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0d0d0f', paddingHorizontal: 24 },
+    container: { flex: 1, backgroundColor: '#000', paddingHorizontal: 24 },
     backButton: {
         width: 40,
         height: 40,

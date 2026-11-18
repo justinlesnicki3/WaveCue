@@ -355,7 +355,48 @@ const blacklist = [
   'workout',
   '+', // fan-made mashups ("Artist A + Artist B")
   '＋', // full-width plus, same thing
+  // Genre labels in a title: almost always fan-made playlists/mixes aimed at that crowd
+  // ("Melodic House Mix 2026 | Gorgon City, ..."). Real sets are titled by artist + event.
+  'uk garage',
+  'melodic house',
+  'melodic techno',
+  'deep house',
+  'afro house',
+  'progressive house',
+  'bass house',
+  'hard house',
+  'house mix',
+  'techno mix',
 ];
+
+// Titles listing 3 or more artists are compilations/fan mixes, not a real set
+// ("Gorgon City, Kevin de Vries, Deadmau5, Mau P | Melodic Techno & House Mix").
+// We can't know every artist's name, so we look at how the title is written: find the part
+// of the title that has the DJ's name (titles are split on | - @ : ( ) [ ]), then count the
+// names listed in it, separated by commas, "&", "and" or " x ". "B2B" isn't counted, and
+// commas in other parts (venues like "Stage, Festival, Country") don't count either.
+const MAX_LISTED_ARTISTS = 2;
+const TITLE_PART_SPLIT = /\s[|\-–—:]\s|[|@()[\]]/;
+const ARTIST_LIST_SPLIT = /\s*(?:,|&|\band\b|\sx\s)\s*/i;
+
+const listsTooManyArtists = (title, djName) => {
+  const dj = (djName || '').trim().toLowerCase();
+  if (!dj) return false;
+  return (title || '')
+    .split(TITLE_PART_SPLIT)
+    .map((part) => part.toLowerCase())
+    .filter((part) => part.includes(dj))
+    .some((part) => {
+      // swap the DJ's own name for a placeholder first, so names with "&" or "x" in them
+      // (e.g. "Above & Beyond") still count as one artist
+      const names = part
+        .split(dj).join('\u0000')
+        .split(ARTIST_LIST_SPLIT)
+        .map((name) => name.trim())
+        .filter(Boolean);
+      return names.length > MAX_LISTED_ARTISTS;
+    });
+};
 
 // Blocked as whole words only, any capitalization, so they don't hit longer words that
 // happen to contain them (e.g. "style" must not block the artist Max Styler).
@@ -419,14 +460,23 @@ const isLikelySet = (title, channelTitle, djName, { officialChannel = false } = 
     blacklist.some(b => lowerTitle.includes(b)) || blockedWordPattern.test(title || '');
   const hasBlockedArtist = blockedArtistPattern.test(title || '');
   const hasEmoji = emojiPattern.test(title || '');
+  const hasArtistList = listsTooManyArtists(title, djName);
 
   if (!hasDJName) console.log('!! Skipped (no DJ name):', title);
   else if (!hasSetKeyword) console.log('!! Skipped (no keyword):', title);
   else if (hasBlacklisted) console.log('!! Skipped (blacklisted):', title);
   else if (hasBlockedArtist) console.log('!! Skipped (blocked artist):', title);
   else if (hasEmoji) console.log('!! Skipped (emoji in title):', title);
+  else if (hasArtistList) console.log('!! Skipped (lists 3+ artists):', title);
 
-  return hasDJName && hasSetKeyword && !hasBlacklisted && !hasBlockedArtist && !hasEmoji;
+  return (
+    hasDJName &&
+    hasSetKeyword &&
+    !hasBlacklisted &&
+    !hasBlockedArtist &&
+    !hasEmoji &&
+    !hasArtistList
+  );
 };
 
 const parseISO8601Duration = duration => {

@@ -178,15 +178,19 @@ const blacklist = [
   'shorts',
   'behind the scenes',
   'preview',
+  'fan made',
   'ufo',
   'what',
   'overwatch',
   'treatment',
   'opioid',
   'cubano',
+  'mashup',
   'tech house',
   'techhouse',
   'workout',
+  '+', // fan-made mashups ("Artist A + Artist B")
+  '＋', // full-width plus, same thing
 ];
 
 // Blocked as whole words only, any capitalization, so they don't hit longer words that

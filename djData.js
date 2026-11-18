@@ -53,6 +53,7 @@ export const DJ_DATABASE = [
         name: 'FISHER',
         image: fisherImg,
         youtubeQuery: 'FISHER',
+        youtubeChannelId: 'UCnr1-8gbgQ7YFd8twlBDhhg', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -60,6 +61,7 @@ export const DJ_DATABASE = [
         name: 'Vintage Culture',
         image: vintagecultureImg,
         youtubeQuery: 'Vintage Culture',
+        youtubeChannelId: 'UC4N1snt2b0d83vOkvaWP6mg', // official channel (New Sets reads its uploads)
         genres: ['Progressive House', 'Melodic House'],
     },
     {
@@ -67,6 +69,7 @@ export const DJ_DATABASE = [
         name: 'Odd Mob',
         image: oddmobImg,
         youtubeQuery: 'Odd Mob',
+        youtubeChannelId: 'UCogDK2p-5iY0qpn4lOFLGWA', // official channel (New Sets reads its uploads)
         genres: ['Bass House', 'Tech House'],
     },
     {
@@ -74,6 +77,7 @@ export const DJ_DATABASE = [
         name: 'Disco Lines',
         image: discoLinesImg,
         youtubeQuery: 'Disco Lines',
+        youtubeChannelId: 'UCSVO3zCAiv2Q5GVeGFNVgyQ', // official channel (New Sets reads its uploads)
         genres: ['Tech House', 'Melodic House'],
     },
     {
@@ -81,6 +85,7 @@ export const DJ_DATABASE = [
         name: 'Riordan',
         image: riordanImg,
         youtubeQuery: 'Riordan',
+        youtubeChannelId: 'UCgyVv5a-W3ZcBZmSnvwk_ew', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -88,6 +93,7 @@ export const DJ_DATABASE = [
         name: 'Mau P',
         image: maupImg,
         youtubeQuery: 'Mau P',
+        youtubeChannelId: 'UCTJ1YTI-M0LgBl_-JNGCwmw', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -95,6 +101,7 @@ export const DJ_DATABASE = [
         name: 'John Summit',
         image: johnsummitImg,
         youtubeQuery: 'John Summit',
+        youtubeChannelId: 'UCsIVrho83JfwUieSs_UKCmA', // official channel (New Sets reads its uploads)
         genres: ['Tech House', 'Progressive House'],
     },
     {
@@ -102,6 +109,7 @@ export const DJ_DATABASE = [
         name: 'J. Worra',
         image: jworraImg,
         youtubeQuery: 'J. Worra',
+        youtubeChannelId: 'UCKbul9QRhCawR1CsEFcKDtA', // official channel (New Sets reads its uploads)
         genres: ['Tech House', 'Bass House'],
     },
     {
@@ -109,6 +117,7 @@ export const DJ_DATABASE = [
         name: 'Ship Wrek',
         image: shipwrekImg,
         youtubeQuery: 'Ship Wrek',
+        youtubeChannelId: 'UCMBgTF8d6cZ_y6lnL8NQlcw', // official channel (New Sets reads its uploads)
         genres: ['Bass House'],
     },
     {
@@ -116,6 +125,7 @@ export const DJ_DATABASE = [
         name: 'Gorgon City',
         image: gorgoncityImg,
         youtubeQuery: 'Gorgon City',
+        youtubeChannelId: 'UCxD2gCy3e0EUWN5EylcBGMA', // official channel (New Sets reads its uploads)
         genres: ['UK Garage', 'Deep House'],
     },
     {
@@ -123,6 +133,7 @@ export const DJ_DATABASE = [
         name: 'Disclosure',
         image: disclosureImg,
         youtubeQuery: 'Disclosure',
+        youtubeChannelId: 'UCTyZ4LCVRiCEVfkVqdi0m3A', // official channel (New Sets reads its uploads)
         genres: ['UK Garage', 'Deep House'],
     },
     {
@@ -130,6 +141,7 @@ export const DJ_DATABASE = [
         name: 'Discip',
         image: discipImg,
         youtubeQuery: 'Discip',
+        youtubeChannelId: 'UCYWBEn7SchUq923olLWjNug', // official channel (New Sets reads its uploads)
         genres: ['Bass House'],
     },
     {
@@ -137,6 +149,7 @@ export const DJ_DATABASE = [
         name: 'GENESI',
         image: genesiImg,
         youtubeQuery: 'GENESI',
+        youtubeChannelId: 'UCoUWy8Wi8rpa_vzbB1IDbRQ', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -144,6 +157,7 @@ export const DJ_DATABASE = [
         name: 'Max Styler',
         image: maxstylerImg,
         youtubeQuery: 'Max Styler',
+        youtubeChannelId: 'UC_CrzdzLplnf2lqZwypeM1w', // official channel (New Sets reads its uploads)
         genres: ['Tech House', 'Bass House'],
     },
     {
@@ -151,6 +165,7 @@ export const DJ_DATABASE = [
         name: 'GUDFELLA',
         image: gudfellaImg,
         youtubeQuery: 'GUDFELLA',
+        youtubeChannelId: 'UCGFSmOuR7P_TS5XidoF3WkA', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -158,6 +173,7 @@ export const DJ_DATABASE = [
         name: 'Layton Giordani',
         image: laytongiordaniImg,
         youtubeQuery: 'Layton Giordani',
+        youtubeChannelId: 'UCKZmvCsaDGGGfijZMs9uNjg', // official channel (New Sets reads its uploads)
         genres: ['Techno'],
     },
     {
@@ -165,6 +181,7 @@ export const DJ_DATABASE = [
         name: 'Roddy Lima',
         image: placeholder,
         youtubeQuery: 'Roddy Lima',
+        youtubeChannelId: 'UClF0lap0s4hMLP2kIeADWtg', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -172,6 +189,7 @@ export const DJ_DATABASE = [
         name: 'Green Velvet',
         image: placeholder,
         youtubeQuery: 'Green Velvet',
+        youtubeChannelId: 'UCTQqrOsFi1Rxta5R9mpbX3g', // official channel (New Sets reads its uploads)
         genres: ['Tech House', 'Techno'],
     },
     {
@@ -179,6 +197,7 @@ export const DJ_DATABASE = [
         name: 'Chris Lorenzo',
         image: placeholder,
         youtubeQuery: 'Chris Lorenzo',
+        youtubeChannelId: 'UCTrorfY74Fs3Nn1za0mUP7g', // official channel (New Sets reads its uploads)
         genres: ['Bass House', 'UK Garage'],
     },
     {
@@ -186,6 +205,7 @@ export const DJ_DATABASE = [
         name: 'Matroda',
         image: placeholder,
         youtubeQuery: 'Matroda',
+        youtubeChannelId: 'UCwe-ITb2csyXTuB-l2Cf9MA', // official channel (New Sets reads its uploads)
         genres: ['Tech House', 'Bass House'],
     },
     {
@@ -193,6 +213,7 @@ export const DJ_DATABASE = [
         name: 'SIDEPIECE',
         image: placeholder,
         youtubeQuery: 'SIDEPIECE',
+        youtubeChannelId: 'UC4CFtujFMNGXRixR5tCPKdQ', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -200,6 +221,7 @@ export const DJ_DATABASE = [
         name: 'Westend',
         image: placeholder,
         youtubeQuery: 'Westend',
+        youtubeChannelId: 'UCgrA524q825FtGsF3mYyw1g', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -207,6 +229,7 @@ export const DJ_DATABASE = [
         name: 'OMNOM',
         image: placeholder,
         youtubeQuery: 'OMNOM',
+        youtubeChannelId: 'UC_43kOpqmQyDFSk1BYskbuQ', // official channel (New Sets reads its uploads)
         genres: ['Bass House'],
     },
     {
@@ -214,6 +237,7 @@ export const DJ_DATABASE = [
         name: 'AYYBO',
         image: placeholder,
         youtubeQuery: 'AYYBO',
+        youtubeChannelId: 'UCpXN2mFZZ76QcwHWeUPEg8g', // official channel (New Sets reads its uploads)
         genres: ['Bass House'],
     },
     {
@@ -221,6 +245,7 @@ export const DJ_DATABASE = [
         name: 'Cloonee',
         image: clooneeImg,
         youtubeQuery: 'Cloonee',
+        youtubeChannelId: 'UC51WF-i8Wtp1PqRc3mXfKaA', // official channel (New Sets reads its uploads)
         genres: ['Tech House'],
     },
     {
@@ -235,6 +260,7 @@ export const DJ_DATABASE = [
         name: 'MALAA',
         image: placeholder,
         youtubeQuery: 'MALAAA',
+        youtubeChannelId: 'UCIyzc4i5ewvmJLzHFF4G5kw', // official channel (New Sets reads its uploads)
         genres: ['Bass House', 'Tech House'],
     },
     {
@@ -242,6 +268,7 @@ export const DJ_DATABASE = [
         name: 'Fred again..',
         image: fredagainImg,
         youtubeQuery: 'Fred again..',
+        youtubeChannelId: 'UCXF6DMVLIVRr2OQAqyfEGeg', // official channel (New Sets reads its uploads)
         genres: ['UK Garage', 'Melodic House'],
     },
     {
@@ -249,6 +276,7 @@ export const DJ_DATABASE = [
         name: 'Kettama',
         image: kettamaImg,
         youtubeQuery: 'Kettama',
+        youtubeChannelId: 'UC8Ux8sqx7e4Z-GQz0QVjPXQ', // official channel (New Sets reads its uploads)
         genres: ['Hard House', 'UK Garage'],
     },
 ];

@@ -6,6 +6,7 @@ const API_KEY = YOUTUBE_API_KEY;
 const SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const VIDEO_DETAILS_URL = 'https://www.googleapis.com/youtube/v3/videos';
 const CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
+const PLAYLIST_ITEMS_URL = 'https://www.googleapis.com/youtube/v3/playlistItems';
 
 // Skip uploads from channels smaller than this (filters out most fan re-uploads)
 const MIN_CHANNEL_SUBSCRIBERS = 100;
@@ -13,10 +14,12 @@ const MIN_CHANNEL_SUBSCRIBERS = 100;
 // Public entry
 // options.publishedAfter: ISO date string; only return videos published after it
 // options.order: YouTube sort order, e.g. 'date' for newest first (default: relevance)
+// options.videoDuration: YouTube length filter, e.g. 'long' (over 20 min) so short uploads
+//   (tracks, lyric videos, clips) don't use up the limited number of results
 // options.throwOnError: rethrow request failures instead of returning [] (so callers can
 //   tell "no results" apart from "request failed")
 export const searchDJSets = async (djName, options = {}) => {
-  const { signal, publishedAfter, order, throwOnError = false } = options;
+  const { signal, publishedAfter, order, videoDuration, throwOnError = false } = options;
 
   if (!API_KEY) {
     console.error('!! YOUTUBE_API_KEY is missing');
@@ -38,6 +41,7 @@ export const searchDJSets = async (djName, options = {}) => {
           maxResults: 25,
           publishedAfter,
           order,
+          videoDuration,
           pageToken: nextPageToken,
           key: API_KEY,
           fields: 'items(id/videoId,snippet(title,channelTitle,publishedAt,thumbnails/high/url)),nextPageToken',
@@ -51,74 +55,8 @@ export const searchDJSets = async (djName, options = {}) => {
       if (!nextPageToken) break;
     }
 
-    const idSet = new Set();
-    const uniqueSearchResults = [];
-    for (const item of searchResults) {
-      const vid = item?.id?.videoId;
-      if (vid && !idSet.has(vid)) {
-        idSet.add(vid);
-        uniqueSearchResults.push(item);
-      }
-    }
-
-    const videoIds = uniqueSearchResults.map(i => i.id.videoId).join(',');
-    if (!videoIds) return [];
-
-    const { data: detailsData } = await axios.get(VIDEO_DETAILS_URL, {
-      signal,
-      params: {
-        part: 'contentDetails,snippet',
-        id: videoIds,
-        key: API_KEY,
-        fields:
-          'items(id,contentDetails/duration,snippet(title,channelId,channelTitle,publishedAt,liveBroadcastContent,thumbnails(high,medium,default)))',
-      },
-    });
-
-    const uniqueDetailsMap = new Map();
-    for (const v of detailsData.items || []) {
-      if (!uniqueDetailsMap.has(v.id)) uniqueDetailsMap.set(v.id, v);
-    }
-    const uniqueDetails = Array.from(uniqueDetailsMap.values());
-
-    const longSets = uniqueDetails.filter(video => {
-      const duration = parseISO8601Duration(video.contentDetails?.duration);
-      const title = video.snippet?.title || '';
-      const channel = video.snippet?.channelTitle || '';
-      if (isLiveOrUpcoming(video)) {
-        console.log('!! Skipped (live now / upcoming):', title);
-        return false;
-      }
-      return duration >= 50 && isLikelySet(title, channel, djName);
-    });
-
-    // Drop uploads from tiny channels (mostly fan re-uploads). One batched request.
-    const subscribers = await fetchSubscriberCounts(
-      longSets.map(v => v.snippet?.channelId),
-      signal
-    );
-    const fromRealChannels = longSets.filter(video => {
-      const count = subscribers.get(video.snippet?.channelId);
-      // undefined = channel hides its count (or wasn't returned); give it the benefit of the doubt
-      if (count !== undefined && count < MIN_CHANNEL_SUBSCRIBERS) {
-        console.log(`!! Skipped (channel has ${count} subscribers):`, video.snippet?.title);
-        return false;
-      }
-      return true;
-    });
-
-    return fromRealChannels.map(video => ({
-      id: video.id, 
-      videoId: video.id,
-      title: video.snippet.title,
-      thumbnail:
-        video.snippet.thumbnails?.high?.url ||
-        video.snippet.thumbnails?.medium?.url ||
-        video.snippet.thumbnails?.default?.url ||
-        null,
-      publishDate: video.snippet.publishedAt,
-      channelTitle: video.snippet.channelTitle,
-    }));
+    const videoIds = [...new Set(searchResults.map((i) => i?.id?.videoId).filter(Boolean))];
+    return await videosToSets(videoIds, djName, { signal });
   } catch (error) {
     if (axios.isCancel(error)) {
       console.warn('!!! YouTube API request was aborted');
@@ -128,6 +66,133 @@ export const searchDJSets = async (djName, options = {}) => {
     if (throwOnError) throw error;
     return [];
   }
+};
+
+// Sets the DJ uploaded to their own official channel since publishedAfter.
+// Popular DJs get so many fan uploads, lyric videos and AI "style" mixes that a general
+// search can't reach back far enough; reading the channel's uploads list directly is
+// reliable, and costs 1 quota unit per 50 videos instead of 100 per search.
+export const fetchChannelSets = async (channelId, djName, options = {}) => {
+  const { signal, publishedAfter, throwOnError = false } = options;
+  if (!API_KEY || !channelId) return [];
+
+  try {
+    // every channel's uploads playlist id is its channel id with "UC" swapped for "UU"
+    const uploadsPlaylist = 'UU' + channelId.slice(2);
+    const after = publishedAfter ? new Date(publishedAfter).getTime() : 0;
+    const videoIds = [];
+    let pageToken = null;
+
+    for (let page = 0; page < 2; page++) {
+      const { data } = await axios.get(PLAYLIST_ITEMS_URL, {
+        signal,
+        params: {
+          part: 'contentDetails',
+          playlistId: uploadsPlaylist,
+          maxResults: 50,
+          pageToken,
+          key: API_KEY,
+          fields: 'items(contentDetails(videoId,videoPublishedAt)),nextPageToken',
+        },
+      });
+
+      let reachedOlder = false;
+      for (const item of data.items || []) {
+        const id = item.contentDetails?.videoId;
+        const published = new Date(item.contentDetails?.videoPublishedAt).getTime();
+        if (after && published < after) {
+          reachedOlder = true;
+          continue;
+        }
+        if (id) videoIds.push(id);
+      }
+
+      pageToken = data.nextPageToken;
+      // uploads are listed newest first, so once we pass the cutoff there's nothing newer left
+      if (!pageToken || reachedOlder) break;
+    }
+
+    return await videosToSets([...new Set(videoIds)], djName, { signal, officialChannel: true });
+  } catch (error) {
+    if (axios.isCancel(error)) {
+      console.warn('!!! YouTube API request was aborted');
+    } else {
+      console.error('YouTube channel uploads error:', error.response?.data || error.message);
+    }
+    if (throwOnError) throw error;
+    return [];
+  }
+};
+
+// Looks up video details and keeps only the ones that look like real DJ sets.
+// officialChannel: the videos come from the DJ's own channel, so skip the "is the DJ's
+// name in the title" and small-channel checks (every other filter still applies).
+const videosToSets = async (videoIds, djName, { signal, officialChannel = false } = {}) => {
+  if (!videoIds.length) return [];
+
+  const details = [];
+  // the API accepts up to 50 ids per request
+  for (let i = 0; i < videoIds.length; i += 50) {
+    const { data } = await axios.get(VIDEO_DETAILS_URL, {
+      signal,
+      params: {
+        part: 'contentDetails,snippet',
+        id: videoIds.slice(i, i + 50).join(','),
+        key: API_KEY,
+        fields:
+          'items(id,contentDetails/duration,snippet(title,channelId,channelTitle,publishedAt,liveBroadcastContent,thumbnails(high,medium,default)))',
+      },
+    });
+    details.push(...(data.items || []));
+  }
+
+  const uniqueDetailsMap = new Map();
+  for (const v of details) {
+    if (!uniqueDetailsMap.has(v.id)) uniqueDetailsMap.set(v.id, v);
+  }
+  const uniqueDetails = Array.from(uniqueDetailsMap.values());
+
+  const longSets = uniqueDetails.filter(video => {
+    const duration = parseISO8601Duration(video.contentDetails?.duration);
+    const title = video.snippet?.title || '';
+    const channel = video.snippet?.channelTitle || '';
+    if (isLiveOrUpcoming(video)) {
+      console.log('!! Skipped (live now / upcoming):', title);
+      return false;
+    }
+    return duration >= 50 && isLikelySet(title, channel, djName, { officialChannel });
+  });
+
+  // Drop uploads from tiny channels (mostly fan re-uploads). One batched request.
+  let fromRealChannels = longSets;
+  if (!officialChannel) {
+    const subscribers = await fetchSubscriberCounts(
+      longSets.map(v => v.snippet?.channelId),
+      signal
+    );
+    fromRealChannels = longSets.filter(video => {
+      const count = subscribers.get(video.snippet?.channelId);
+      // undefined = channel hides its count (or wasn't returned); give it the benefit of the doubt
+      if (count !== undefined && count < MIN_CHANNEL_SUBSCRIBERS) {
+        console.log(`!! Skipped (channel has ${count} subscribers):`, video.snippet?.title);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  return fromRealChannels.map(video => ({
+    id: video.id,
+    videoId: video.id,
+    title: video.snippet.title,
+    thumbnail:
+      video.snippet.thumbnails?.high?.url ||
+      video.snippet.thumbnails?.medium?.url ||
+      video.snippet.thumbnails?.default?.url ||
+      null,
+    publishDate: video.snippet.publishedAt,
+    channelTitle: video.snippet.channelTitle,
+  }));
 };
 
 /* ----------------------- helpers ----------------------- */
@@ -243,13 +308,13 @@ const setKeywords = [
   'at',
 ];
 
-const isLikelySet = (title, channelTitle, djName) => {
+const isLikelySet = (title, channelTitle, djName, { officialChannel = false } = {}) => {
   const lowerTitle = (title || '').toLowerCase();
   const lowerChannel = (channelTitle || '').toLowerCase();
   const lowerDJName = (djName || '').toLowerCase();
 
   const hasDJName =
-    lowerTitle.includes(lowerDJName) || lowerChannel.includes(lowerDJName);
+    officialChannel || lowerTitle.includes(lowerDJName) || lowerChannel.includes(lowerDJName);
   const hasSetKeyword = setKeywords.some(k => lowerTitle.includes(k));
   const hasBlacklisted =
     blacklist.some(b => lowerTitle.includes(b)) || blockedWordPattern.test(title || '');

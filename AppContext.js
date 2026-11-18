@@ -6,7 +6,8 @@ import React, {
   useState,
 } from 'react';
 import { supabase } from './lib/supabase';
-import { searchDJSets } from './services/youtube';
+import { searchDJSets, fetchChannelSets } from './services/youtube';
+import { DJ_DATABASE } from './djData';
 
 export const AppContext = createContext();
 
@@ -16,6 +17,14 @@ const NEW_SET_WINDOW_DAYS = 45;
 function normalizeName(name) {
   return (name || '').trim().toLowerCase();
 }
+
+// DJ name (any capitalization) -> their official YouTube channel id, from djData
+const CHANNEL_BY_DJ = new Map(
+  DJ_DATABASE.filter((dj) => dj.youtubeChannelId).map((dj) => [
+    normalizeName(dj.name),
+    dj.youtubeChannelId,
+  ])
+);
 
 // Converts "mm:ss" or "hh:mm:ss" or "123" or 123 -> seconds (number)
 function toSeconds(t) {
@@ -480,13 +489,32 @@ export const AppProvider = ({ children }) => {
 
     for (const dj of djList) {
       try {
-        // ask YouTube for recent uploads only, newest first
-        const results = await searchDJSets(dj.name, {
-          publishedAfter: cutoff.toISOString(),
-          order: 'date',
-          throwOnError: true,
-        });
+        const publishedAfter = cutoff.toISOString();
+        const channelId = CHANNEL_BY_DJ.get(normalizeName(dj.name));
+
+        // Two sources, since neither catches everything on its own:
+        //  - the DJ's own channel uploads (their own sets, however busy YouTube gets)
+        //  - a search for recent long videos (sets posted by Cercle, Boiler Room, festivals...)
+        const [searchResult, channelResult] = await Promise.allSettled([
+          searchDJSets(dj.name, {
+            publishedAfter,
+            order: 'date',
+            videoDuration: 'long',
+            throwOnError: true,
+          }),
+          channelId
+            ? fetchChannelSets(channelId, dj.name, { publishedAfter, throwOnError: true })
+            : Promise.resolve([]),
+        ]);
+        if (searchResult.status === 'rejected' && channelResult.status === 'rejected') {
+          throw searchResult.reason;
+        }
         anySucceeded = true;
+
+        const results = [
+          ...(channelResult.status === 'fulfilled' ? channelResult.value : []),
+          ...(searchResult.status === 'fulfilled' ? searchResult.value : []),
+        ];
 
         for (const set of results) {
           const fullSet = { ...set, djName: (dj.name || '').toLowerCase() };

@@ -19,6 +19,7 @@ const djImages = {
   'fred again..': require('../assets/images/fredagainMYDJ.jpg'),
   kettama: require('../assets/images/kettamaMYDJ.jpg'),
   'interplanetary criminal': require('../assets/images/interplanetarycriminalMYDJ.jpg'),
+  'silva bumpa': require('../assets/images/silvabumpaMYDJ.jpg'),
 };
 
 const placeholder = require('../assets/images/placeholder.jpg');

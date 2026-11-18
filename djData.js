@@ -21,6 +21,7 @@ import kettamaImg from './assets/images/kettama.jpg';
 import kettamaCardImg from './assets/images/kettamaCard.jpg';
 import interplanetarycriminalImg from './assets/images/interplanetarycriminal.jpg';
 import interplanetarycriminalCardImg from './assets/images/interplanetarycriminalCard.jpg';
+import silvabumpaImg from './assets/images/silvabumpa.jpg';
 
 // Representative artist image per genre, used as the backdrop for the
 // genre browse cards on the Search screen.
@@ -288,5 +289,13 @@ export const DJ_DATABASE = [
         youtubeQuery: 'Interplanetary Criminal',
         youtubeChannelId: 'UCCr1ACiFCncsPFXDmGzZPbw', // official channel (New Sets reads its uploads)
         genres: ['UK Garage', 'Hard House'],
+    },
+    {
+        id: 'Silva Bumpa',
+        name: 'Silva Bumpa',
+        image: silvabumpaImg,
+        youtubeQuery: 'Silva Bumpa',
+        youtubeChannelId: 'UCW_qdUJiD8-VUJMQ7FQ0xRg', // official channel (New Sets reads its uploads)
+        genres: ['UK Garage'],
     },
 ];

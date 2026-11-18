@@ -9,6 +9,8 @@ import { signInWithEmail } from '../services/authService'
 export default function LoginScreen() {
     const navigation = useNavigation();
     const { width, height } = useWindowDimensions();
+    // where the title sits, so the night sky leaves that spot empty
+    const [titleBox, setTitleBox] = useState(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +34,7 @@ export default function LoginScreen() {
     return (
         <SafeAreaView style={styles.container}>
             {/* same twinkling night sky as the Welcome screen */}
-            <NightSky width={width} height={height} />
+            <NightSky width={width} height={height} avoid={titleBox ? [titleBox] : []} />
 
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <ArrowLeftIcon size={22} color="#fff" />
@@ -40,7 +42,7 @@ export default function LoginScreen() {
 
             <View style={styles.topSpacer} />
 
-            <Text style={styles.title}>Welcome Back!</Text>
+            <Text style={styles.title} onLayout={(e) => { const { x, y, width, height } = e.nativeEvent.layout; setTitleBox({ x, y, width, height }); }}>Welcome Back!</Text>
 
             <View style={styles.card}>
                 <TextInput

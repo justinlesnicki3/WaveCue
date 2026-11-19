@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native'
 
 import NightSky from '../components/welcome/NightSky'
 import Island, { ISLAND_VIEW_W, ISLAND_VIEW_H, ISLAND_SPOTS } from '../components/welcome/Island'
-import Hippie, { Smoke, HIPPIE_VIEW, JOINT_TIP } from '../components/welcome/Hippie'
+import Skeleton, { SKELETON_VIEW_W, SKELETON_GROUND_Y } from '../components/welcome/Skeleton'
 import LakeWaves from '../components/welcome/LakeWaves'
 
 const WATERLINE = 0.66 // fraction of screen height where the sea starts
@@ -25,16 +25,12 @@ export default function WelcomeScreen() {
     const islandTop = waterTop - islandH + ISLAND_SINK
     const islandScale = islandW / ISLAND_VIEW_W
 
-    // the hippie sits on the island's free spot (grid units -> screen)
-    const hippieSize = 92 * islandScale
-    const seatX = islandLeft + ISLAND_SPOTS.seat.x * islandScale
-    const seatY = islandTop + ISLAND_SPOTS.seat.y * islandScale
-    const hippieLeft = seatX - hippieSize / 2
-    const hippieTop = seatY - hippieSize
-    // smoke starts at the joint and drifts up to just under the title
-    const smokeX = hippieLeft + (JOINT_TIP.x / HIPPIE_VIEW) * hippieSize
-    const smokeY = hippieTop + (JOINT_TIP.y / HIPPIE_VIEW) * hippieSize
-    const smokeRise = smokeY - (insets.top + 110)
+    // the skeleton sits on the sand with his back against the palm trunk (grid units -> screen)
+    const skeletonW = 150 * islandScale
+    const skeletonScale = skeletonW / SKELETON_VIEW_W
+    const skeletonLeft = islandLeft + ISLAND_SPOTS.lean.x * islandScale
+    const skeletonTop =
+        islandTop + ISLAND_SPOTS.lean.y * islandScale - SKELETON_GROUND_Y * skeletonScale
 
     return (
         <View style={styles.container}>
@@ -47,10 +43,9 @@ export default function WelcomeScreen() {
                 <Island width={islandW} />
             </View>
 
-            {/* smoke rising toward the title, then the hippie swaying on the island */}
-            <Smoke x={smokeX} y={smokeY} rise={smokeRise} />
-            <View style={[styles.island, { left: hippieLeft, top: hippieTop }]} pointerEvents="none">
-                <Hippie size={hippieSize} />
+            {/* the skeleton chilling against the palm, nodding along with his headphones on */}
+            <View style={[styles.island, { left: skeletonLeft, top: skeletonTop }]} pointerEvents="none">
+                <Skeleton width={skeletonW} />
             </View>
 
             <View style={[styles.lake, { top: waterTop }]}>

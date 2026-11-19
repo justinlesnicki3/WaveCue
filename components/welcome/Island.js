@@ -18,12 +18,13 @@ import { seededRandom } from './seededRandom';
 // with little dunes, craters and speckled texture, one tall leaning palm with solid cartoon leaves,
 // and a treasure chest overflowing with vinyl records. Drawn in a 400 x 340 grid and scaled to
 // `width`. The bottom of the sand sits at the bottom of the drawing so the waves can cover it.
-// The open sand to the right of the trunk is left free for a character (and his smoke) later.
+// The open sand to the right of the trunk is left free for the character leaning on the palm.
 export const ISLAND_VIEW_W = 400;
 export const ISLAND_VIEW_H = 340;
 
 // grid points where future additions go (e.g. the character sitting by the palm)
-export const ISLAND_SPOTS = { seat: { x: 270, y: 280 } };
+// lean: where the skeleton's back meets the trunk (left edge) and the sand he sits on (y)
+export const ISLAND_SPOTS = { lean: { x: 196, y: 283 } };
 
 const INK = '#2a1d12';
 const SAND_LIGHT = '#dcc092';

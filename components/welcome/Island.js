@@ -70,7 +70,7 @@ function buildTrunk() {
     const len = Math.hypot(dx, dy) || 1;
     const nx = -dy / len;
     const ny = dx / len;
-    const half = 8 - 4.5 * t; // tapers toward the crown
+    const half = 10.5 - 5 * t; // tapers toward the crown
     left.push([p[0] + nx * half, p[1] + ny * half]);
     right.push([p[0] - nx * half, p[1] - ny * half]);
     // fine growth rings across the trunk

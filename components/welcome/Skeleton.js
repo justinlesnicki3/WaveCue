@@ -209,7 +209,10 @@ export default function Skeleton({ width }) {
   }, []);
 
   const rotate = nod.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '6deg'] });
-  const origin = `${(NECK.x / SKELETON_VIEW_W) * 100}% ${(NECK.y / SKELETON_VIEW_H) * 100}%`;
+  // the neck, in pixels: [x, y, z]. (A long percentage string like "40.909090%" crashes
+  // React Native's parser on phones, so use plain numbers.)
+  const scale = width / SKELETON_VIEW_W;
+  const origin = [Math.round(NECK.x * scale * 10) / 10, Math.round(NECK.y * scale * 10) / 10, 0];
   const viewBox = `0 0 ${SKELETON_VIEW_W} ${SKELETON_VIEW_H}`;
 
   return (

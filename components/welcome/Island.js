@@ -15,7 +15,7 @@ import Svg, {
 import { seededRandom } from './seededRandom';
 
 // A small desert island at night, drawn in a more realistic, sketched style: a low sand mound
-// with little dunes, craters and speckled texture, one tall leaning palm with feathery fronds,
+// with little dunes, craters and speckled texture, one tall leaning palm with solid cartoon leaves,
 // and a treasure chest overflowing with vinyl records. Drawn in a 400 x 340 grid and scaled to
 // `width`. The bottom of the sand sits at the bottom of the drawing so the waves can cover it.
 // The open sand to the right of the trunk is left free for a character (and his smoke) later.
@@ -30,7 +30,10 @@ const SAND_LIGHT = '#dcc092';
 const SAND_DARK = '#9c7a52';
 const TRUNK_LIGHT = '#9a7148';
 const TRUNK_DARK = '#5b3f24';
-const LEAF_COLORS = ['#3f7a40', '#55924f', '#6aa35d', '#4a8646'];
+// cartoon leaves: lighter top half, darker bottom half, darker veins
+const LEAF_LIGHT = '#5ea552';
+const LEAF_DARK = '#3d7d3c';
+const LEAF_VEIN = '#2b5a2a';
 const RIM = '#8f9cc0'; // soft moonlight edge so shapes read against the black sky
 
 // Small mound rising gently toward the palm, with a few little dunes along the top
@@ -83,8 +86,11 @@ function buildTrunk() {
   return { outline, rings };
 }
 
-// One feathery frond: a curved stem with many thin leaflets hanging off both sides
-function buildFrond(angleDeg, length, droop, rand) {
+// One cartoon palm leaf: a solid, smooth blade along an arching stem (like a classic cartoon
+// palm), widest in the middle and tapering to a point, with a few soft notches cut into its
+// lower edge and short veins. Returns paths for the whole blade, its lighter top half, the
+// center vein and the side veins.
+function buildFrond(angleDeg, length, droop) {
   const [cx, cy] = CROWN;
   const a = (angleDeg * Math.PI) / 180;
   const tip = [cx + Math.cos(a) * length, cy + Math.sin(a) * length + droop];
@@ -94,53 +100,78 @@ function buildFrond(angleDeg, length, droop, rand) {
     (1 - t) * (1 - t) * cx + 2 * (1 - t) * t * ctrl[0] + t * t * tip[0],
     (1 - t) * (1 - t) * cy + 2 * (1 - t) * t * ctrl[1] + t * t * tip[1],
   ];
-
-  const leaflets = [];
-  const count = 18;
-  for (let i = 2; i < count; i++) {
-    const t = i / count;
-    const p = at(t);
-    const q = at(Math.min(1, t + 0.02));
-    let dx = q[0] - p[0];
-    let dy = q[1] - p[1];
+  const tangent = (t) => {
+    const p = at(Math.max(0, t - 0.01));
+    const q = at(Math.min(1, t + 0.01));
+    const dx = q[0] - p[0];
+    const dy = q[1] - p[1];
     const len = Math.hypot(dx, dy) || 1;
-    dx /= len;
-    dy /= len;
-    const size = (8 + 20 * Math.sin(Math.PI * t)) * (1 - 0.25 * t);
-    for (const side of [-1, 1]) {
-      // angle the leaflet forward along the stem, then let gravity pull it down
-      const ang = side * 1.0;
-      let lx = dx * Math.cos(ang) - dy * Math.sin(ang);
-      let ly = dx * Math.sin(ang) + dy * Math.cos(ang) + 0.75;
-      const l = Math.hypot(lx, ly) || 1;
-      lx /= l;
-      ly /= l;
-      const s = size * (0.85 + rand() * 0.3);
-      const end = [p[0] + lx * s, p[1] + ly * s];
-      const mid = [p[0] + lx * s * 0.5 + dx * 2, p[1] + ly * s * 0.5 + dy * 2 - 1.5];
-      leaflets.push({
-        d: `M${p[0]},${p[1]} Q${mid[0]},${mid[1]} ${end[0]},${end[1]}`,
-        color: LEAF_COLORS[Math.floor(rand() * LEAF_COLORS.length)],
-      });
-    }
-  }
-  return {
-    stem: `M${cx},${cy} Q${ctrl[0]},${ctrl[1]} ${tip[0]},${tip[1]}`,
-    leaflets,
+    return [dx / len, dy / len];
   };
+
+  // which side of the stem faces up (the lighter, smooth side); picked once per leaf so it
+  // doesn't flip partway along a curling leaf
+  // the normal is (-dy, dx) * upSign; its y is dx * upSign, which must be negative (up)
+  const [mdx] = tangent(0.5);
+  const upSign = mdx > 0 ? -1 : 1;
+
+  const maxWidth = length * 0.21;
+  const width = (t) => maxWidth * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.7)), 0.65);
+  // soft notches along the lower edge: the edge dips in toward the stem at a few points
+  const NOTCHES = 4;
+  const notch = (t) => {
+    if (t < 0.22 || t > 0.9) return 1;
+    const s = Math.abs(Math.sin(NOTCHES * Math.PI * (t - 0.22) / 0.68));
+    return 1 - 0.42 * Math.pow(1 - s, 6);
+  };
+
+  const STEPS = 48;
+  const mid = [];
+  const upper = [];
+  const lower = [];
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS;
+    const p = at(t);
+    const [dx, dy] = tangent(t);
+    const nx = -dy * upSign;
+    const ny = dx * upSign;
+    const w = width(t);
+    mid.push(p);
+    upper.push([p[0] + nx * w, p[1] + ny * w]);
+    lower.push([p[0] - nx * w * 0.9 * notch(t), p[1] - ny * w * 0.9 * notch(t)]);
+  }
+
+  const f = (pt) => `${pt[0].toFixed(1)},${pt[1].toFixed(1)}`;
+  const line = (pts) => pts.map(f).join(' L');
+  const blade = `M${line(upper)} L${line([...lower].reverse())} Z`;
+  const topHalf = `M${line(upper)} L${line([...mid].reverse())} Z`;
+  const vein = `M${line(mid)}`;
+
+  // short veins from the stem out toward the lower edge, angled toward the tip
+  const veins = [];
+  for (let k = 1; k <= NOTCHES; k++) {
+    const t = 0.22 + (0.68 * (k - 0.5)) / NOTCHES;
+    const p = at(t);
+    const [dx, dy] = tangent(t);
+    const nx = -dy * upSign;
+    const ny = dx * upSign;
+    const w = width(t) * 0.7;
+    const end = [p[0] - nx * w + dx * w * 0.6, p[1] - ny * w + dy * w * 0.6];
+    veins.push(`M${f(p)} L${f(end)}`);
+  }
+
+  return { blade, topHalf, vein, veins };
 }
 
 const FRONDS = [
-  // [angle (0 = right, -90 = up), length, droop]
-  [-172, 118, 64],
-  [-150, 112, 46],
-  [-124, 96, 26],
-  [-98, 86, 18],
-  [-70, 92, 22],
-  [-42, 110, 38],
-  [-14, 120, 58],
-  [10, 106, 72],
-  [168, 96, 80],
+  // [angle (0 = right, -90 = up), length, droop]; drawn in this order, back to front
+  [-108, 92, 18],
+  [-74, 96, 22],
+  [-140, 110, 38],
+  [-40, 112, 38],
+  [168, 100, 78],
+  [-168, 120, 62],
+  [-10, 122, 62],
 ];
 
 // ---------- sand detail ----------
@@ -225,7 +256,7 @@ function Island({ width }) {
     const rand = seededRandom(1977);
     return {
       trunk: buildTrunk(),
-      fronds: FRONDS.map(([a, l, d]) => buildFrond(a, l, d, rand)),
+      fronds: FRONDS.map(([a, l, d]) => buildFrond(a, l, d)),
       sand: buildSandDetail(rand),
     };
   }, []);
@@ -290,10 +321,15 @@ function Island({ width }) {
       {/* ---------- fronds ---------- */}
       {art.fronds.map((f, i) => (
         <G key={i}>
-          {f.leaflets.map((l, j) => (
-            <Path key={j} d={l.d} fill="none" stroke={l.color} strokeWidth={2.4} strokeLinecap="round" />
+          {/* soft moonlight edge so the leaf reads against the black sky */}
+          <Path d={f.blade} fill="none" stroke={RIM} strokeWidth={3.5} strokeLinejoin="round" opacity={0.45} />
+          <Path d={f.blade} fill={LEAF_DARK} />
+          <Path d={f.topHalf} fill={LEAF_LIGHT} />
+          {f.veins.map((d, j) => (
+            <Path key={j} d={d} fill="none" stroke={LEAF_VEIN} strokeWidth={1.2} strokeLinecap="round" />
           ))}
-          <Path d={f.stem} fill="none" stroke="#2f5a2c" strokeWidth={2.2} strokeLinecap="round" />
+          <Path d={f.vein} fill="none" stroke={LEAF_VEIN} strokeWidth={1.6} strokeLinecap="round" />
+          <Path d={f.blade} fill="none" stroke={INK} strokeWidth={1.5} strokeLinejoin="round" />
         </G>
       ))}
 

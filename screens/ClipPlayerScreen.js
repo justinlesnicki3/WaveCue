@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Image,
   ImageBackground,
-  ScrollView,
+  Animated,
+  Easing,
   useWindowDimensions,
 } from 'react-native';
 import { CLIP_PLAYBACK } from '../config/playback';
@@ -35,6 +36,11 @@ const PLAY_RED = '#e62117';
 // YouTube requires embedded players to be at least 200 x 200
 const MIN_PLAYER_SIZE = 200;
 
+// Switching clips slides the pages like stories: the old clip slides out as the new one
+// slides in from the side you're heading toward
+const SLIDE_MS = 340;
+const BODY_SLIDE_PX = 48; // the lower content just nudges in, rather than a full-width slide
+
 function formatTime(value) {
   const sec = toSecondsMaybe(value);
   const h = Math.floor(sec / 3600);
@@ -42,6 +48,55 @@ function formatTime(value) {
   const r = Math.floor(sec % 60);
   const ss = String(r).padStart(2, '0');
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
+// The top of the screen for one clip: DJ photo fading into the dark background, with the
+// clip's title, set and times over it
+function ClipHero({ clip, index, total, topInset }) {
+  const thumbnailUri = `https://img.youtube.com/vi/${clip.videoId}/hqdefault.jpg`;
+  const dj = findDjForSetTitle(clip.djSetTitle);
+  const backdrop = dj?.image ?? { uri: thumbnailUri };
+  const startSec = toSecondsMaybe(clip.start);
+  const endSec = toSecondsMaybe(clip.end);
+
+  return (
+    <ImageBackground source={backdrop} style={styles.heroFill} resizeMode="cover">
+      <LinearGradient
+        colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(14,14,18,0.65)', BG]}
+        locations={[0, 0.3, 0.72, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {total > 1 && (
+        <View style={[styles.positionPill, { top: topInset + 12 }]}>
+          <Text style={styles.positionText}>
+            {index + 1} / {total}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.heroText}>
+        {dj && <Text style={styles.djName}>{dj.name}</Text>}
+        <Text style={styles.title} numberOfLines={2}>
+          {clip.title}
+        </Text>
+        {!!clip.djSetTitle && (
+          <Text style={styles.setTitle} numberOfLines={2}>
+            {clip.djSetTitle}
+          </Text>
+        )}
+
+        <View style={styles.timePill}>
+          <Ionicons name="time-outline" size={14} color="#fff" />
+          <Text style={styles.timeText}>
+            {formatTime(startSec)} – {formatTime(endSec)}
+          </Text>
+          <Text style={styles.timeDivider}>·</Text>
+          <Text style={styles.timeText}>{clipDurationLabel(startSec, endSec)}</Text>
+        </View>
+      </View>
+    </ImageBackground>
+  );
 }
 
 // -------------------- Component --------------------
@@ -83,6 +138,42 @@ export default function ClipPlayerScreen() {
   const { playing, ended, error: playerError } = pb;
   const startSec = toSecondsMaybe(currentClip?.start);
   const endSec = toSecondsMaybe(currentClip?.end);
+
+  // ---------- Slide between clips ----------
+  // Whenever the clip changes within this playlist (Next, Previous, "From this set", or
+  // autoplay moving on), keep the old clip's top section on screen for a moment and slide it
+  // out while the new one slides in. 1 = moving forward (new comes from the right).
+  const slide = useRef(new Animated.Value(1)).current;
+  const [outgoing, setOutgoing] = useState(null); // { clip, index } being slid away
+  const [slideDir, setSlideDir] = useState(1);
+  const shownRef = useRef({ clips, index: currentIndex });
+
+  useEffect(() => {
+    const prev = shownRef.current;
+    shownRef.current = { clips, index: currentIndex };
+    if (prev.clips !== clips || prev.index === currentIndex) return;
+    const oldClip = prev.clips[prev.index];
+    if (!oldClip) return;
+
+    setSlideDir(currentIndex > prev.index ? 1 : -1);
+    setOutgoing({ clip: oldClip, index: prev.index });
+    slide.stopAnimation();
+    slide.setValue(0);
+    Animated.timing(slide, {
+      toValue: 1,
+      duration: SLIDE_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setOutgoing(null);
+    });
+  }, [clips, currentIndex, slide]);
+
+  const incomingX = slide.interpolate({ inputRange: [0, 1], outputRange: [slideDir * width, 0] });
+  const outgoingX = slide.interpolate({ inputRange: [0, 1], outputRange: [0, -slideDir * width] });
+  const bodyX = slide.interpolate({ inputRange: [0, 1], outputRange: [slideDir * BODY_SLIDE_PX, 0] });
+  const bodyOpacity = slide.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 0.85, 1] });
+  const bodySlideStyle = { opacity: bodyOpacity, transform: [{ translateX: bodyX }] };
 
   // Tell the app-wide player where to draw itself on this screen. Measured on layout and
   // again once the slide-in animation finishes; cleared when you leave, which shrinks the
@@ -128,8 +219,6 @@ export default function ClipPlayerScreen() {
   }
 
   const thumbnailUri = `https://img.youtube.com/vi/${currentClip.videoId}/hqdefault.jpg`;
-  const dj = findDjForSetTitle(currentClip.djSetTitle);
-  const backdrop = dj?.image ?? { uri: thumbnailUri };
 
   const isFirst = currentIndex === 0;
   const isLast = currentIndex >= clips.length - 1;
@@ -180,54 +269,24 @@ export default function ClipPlayerScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* ---------- Hero: DJ photo fading into the dark background ---------- */}
-      <ImageBackground
-        source={backdrop}
-        style={[styles.hero, { height: height * (playerOpen ? 0.4 : 0.55) }]}
-        resizeMode="cover"
-      >
-        <LinearGradient
-          colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(14,14,18,0.65)', BG]}
-          locations={[0, 0.3, 0.72, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {clips.length > 1 && (
-          <View style={[styles.positionPill, { top: insets.top + 12 }]}>
-            <Text style={styles.positionText}>
-              {currentIndex + 1} / {clips.length}
-            </Text>
-          </View>
+      {/* ---------- Hero: DJ photo + clip info, sliding like stories between clips ---------- */}
+      <View style={[styles.hero, { height: height * (playerOpen ? 0.4 : 0.55) }]}>
+        {outgoing && (
+          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: outgoingX }] }]}>
+            <ClipHero clip={outgoing.clip} index={outgoing.index} total={clips.length} topInset={insets.top} />
+          </Animated.View>
         )}
-
-        <View style={styles.heroText}>
-          {dj && <Text style={styles.djName}>{dj.name}</Text>}
-          <Text style={styles.title} numberOfLines={2}>
-            {currentClip.title}
-          </Text>
-          {!!currentClip.djSetTitle && (
-            <Text style={styles.setTitle} numberOfLines={2}>
-              {currentClip.djSetTitle}
-            </Text>
-          )}
-
-          <View style={styles.timePill}>
-            <Ionicons name="time-outline" size={14} color="#fff" />
-            <Text style={styles.timeText}>
-              {formatTime(startSec)} – {formatTime(endSec)}
-            </Text>
-            <Text style={styles.timeDivider}>·</Text>
-            <Text style={styles.timeText}>{clipDurationLabel(startSec, endSec)}</Text>
-          </View>
-        </View>
-      </ImageBackground>
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: incomingX }] }]}>
+          <ClipHero clip={currentClip} index={currentIndex} total={clips.length} topInset={insets.top} />
+        </Animated.View>
+      </View>
 
       {backButton}
 
       {/* ---------- Thumbnail + play, which turns into the in-app player ---------- */}
       <View style={styles.body}>
         {!playerOpen ? (
-          <View style={styles.playRow}>
+          <Animated.View style={[styles.playRow, bodySlideStyle]}>
             <Image source={{ uri: thumbnailUri }} style={styles.thumbnail} />
 
             <View style={styles.playInfo}>
@@ -242,7 +301,7 @@ export default function ClipPlayerScreen() {
             <TouchableOpacity style={styles.playButton} onPress={handlePlay} activeOpacity={0.85}>
               <Ionicons name="play" size={30} color="#fff" style={{ marginLeft: 4 }} />
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ) : playerError ? (
           <View style={[styles.playerFallback, { height: playerH }]}>
             <Ionicons name="logo-youtube" size={36} color={PLAY_RED} />
@@ -285,7 +344,7 @@ export default function ClipPlayerScreen() {
           </>
         )}
 
-        <ScrollView style={styles.middle} showsVerticalScrollIndicator={false}>
+        <Animated.ScrollView style={[styles.middle, bodySlideStyle]} showsVerticalScrollIndicator={false}>
           {!!playlistName && (
             <View style={styles.playlistRow}>
               <Ionicons name="list" size={16} color="#8a8a96" />
@@ -329,7 +388,7 @@ export default function ClipPlayerScreen() {
               })}
             </View>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
 
         {/* ---------- Previous / Delete / Next ---------- */}
         <View style={[styles.controls, { paddingBottom: insets.bottom + 20 }]}>
@@ -393,7 +452,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  hero: { width: '100%', justifyContent: 'flex-end' },
+  hero: { width: '100%', overflow: 'hidden', backgroundColor: BG },
+  heroFill: { flex: 1, justifyContent: 'flex-end' },
   positionPill: {
     position: 'absolute',
     right: 16,
